@@ -284,7 +284,7 @@ export async function getDeductions(userId: string): Promise<{
 
     for (const [key, limit] of Object.entries(DEDUCTION_LIMITS)) {
         const claimed = profile.deductions[key as keyof DeductionDetails] || 0;
-        remaining[key as keyof DeductionDetails] = Math.max(0, limit - claimed);
+        remaining[key as keyof DeductionDetails] = Math.max(0, (limit ?? 0) - claimed);
     }
 
     // Generate suggestions based on underutilized deductions
