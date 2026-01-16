@@ -17,7 +17,7 @@ All percentages are expressed as 0-100 (not 0-1).
 """
 
 from typing import List, Optional, Dict, Any, Literal
-from datetime import date, datetime
+from datetime import date as Date, datetime as DateTime
 from pydantic import BaseModel, Field, field_validator
 from enum import Enum
 
@@ -79,7 +79,7 @@ class HealthResponse(BaseModel):
     """
     status: str = Field(default="ok", description="Service status")
     version: str = Field(description="API version")
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: DateTime = Field(default_factory=DateTime.now)
 
 
 # =============================================================================
@@ -102,7 +102,7 @@ class TransactionInput(BaseModel):
     description: str = Field(description="Transaction description")
     merchant: Optional[str] = Field(default=None, description="Merchant name")
     amount: float = Field(gt=0, description="Amount in INR")
-    date: Optional[date] = Field(default=None, description="Transaction date")
+    date: Optional[Date] = Field(default=None, description="Transaction date")
     category: Optional[str] = Field(default=None, description="Pre-assigned category")
 
 
@@ -202,8 +202,8 @@ class BehaviorAnalyzeRequest(BaseModel):
         min_length=1,
         description="Transactions for the analysis period"
     )
-    period_start: Optional[date] = Field(default=None, description="Period start date")
-    period_end: Optional[date] = Field(default=None, description="Period end date")
+    period_start: Optional[Date] = Field(default=None, description="Period start date")
+    period_end: Optional[Date] = Field(default=None, description="Period end date")
 
 
 class BehaviorAnalyzeResponse(BaseModel):
@@ -237,7 +237,7 @@ class LoanInput(BaseModel):
     emi: float = Field(gt=0, description="Monthly EMI amount")
     interest_rate: float = Field(ge=0, le=50, description="Annual interest rate %")
     remaining_months: int = Field(gt=0, description="Remaining tenure in months")
-    start_date: Optional[date] = Field(default=None, description="Loan start date")
+    start_date: Optional[Date] = Field(default=None, description="Loan start date")
 
 
 class PaymentHistory(BaseModel):
@@ -410,7 +410,7 @@ class GoalInput(BaseModel):
     name: str = Field(description="Goal name")
     target: float = Field(gt=0, description="Target amount in INR")
     current: float = Field(ge=0, default=0, description="Current progress")
-    deadline: date = Field(description="Target completion date")
+    deadline: Date = Field(description="Target completion date")
     priority: int = Field(ge=1, le=10, default=5, description="Priority 1-10 (1=highest)")
 
 
@@ -423,12 +423,12 @@ class GoalAnalysis(BaseModel):
     target: float = Field(description="Target amount")
     current: float = Field(description="Current progress")
     remaining: float = Field(description="Amount still needed")
-    deadline: date = Field(description="Target deadline")
+    deadline: Date = Field(description="Target deadline")
     months_remaining: int = Field(description="Months until deadline")
     required_monthly: float = Field(description="Required monthly savings")
     suggested_allocation: float = Field(description="Suggested allocation from budget")
     achievable: bool = Field(description="Is goal achievable with current allocation")
-    projected_completion: Optional[date] = Field(description="Projected completion date")
+    projected_completion: Optional[Date] = Field(description="Projected completion date")
     months_delayed: int = Field(default=0, description="Months delayed if not achievable")
 
 
@@ -582,7 +582,7 @@ class InsuranceInfo(BaseModel):
     @brief Insurance policy information.
     """
     type: str = Field(description="Insurance type (health, term, etc)")
-    expiry: date = Field(description="Policy expiry date")
+    expiry: Date = Field(description="Policy expiry date")
     premium: float = Field(ge=0, description="Annual premium")
 
 
@@ -592,7 +592,7 @@ class FilingStatus(BaseModel):
     @brief ITR filing status.
     """
     itr_filed_current_fy: bool = Field(default=False, description="ITR filed this FY")
-    last_itr_date: Optional[date] = Field(default=None, description="Last ITR filing date")
+    last_itr_date: Optional[Date] = Field(default=None, description="Last ITR filing date")
 
 
 class AdvanceTaxStatus(BaseModel):
@@ -638,7 +638,7 @@ class Alert(BaseModel):
     severity: AlertSeverity = Field(description="Importance level")
     title: str = Field(description="Alert title")
     message: str = Field(description="Detailed message")
-    due_date: Optional[date] = Field(default=None, description="Due date if applicable")
+    due_date: Optional[Date] = Field(default=None, description="Due date if applicable")
     action: str = Field(description="Recommended action")
 
 
@@ -647,7 +647,7 @@ class AlertCheckRequest(BaseModel):
     @class AlertCheckRequest
     @brief Request for alert/compliance check.
     """
-    current_date: date = Field(description="Today's date for calculations")
+    current_date: Date = Field(description="Today's date for calculations")
     financial_state: FinancialState = Field(description="Current financial state")
 
 

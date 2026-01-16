@@ -17,11 +17,45 @@ The AI Engine is a stateless microservice that:
 @version 1.0.0
 """
 
+import logging
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import settings
 from app.core.logging import setup_logging
+
+# Initialize logging early
+setup_logging()
+logger = logging.getLogger(__name__)
+
+
+# =============================================================================
+# LIFESPAN CONTEXT MANAGER
+# =============================================================================
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    @brief Modern lifespan handler for startup and shutdown events.
+    
+    @description
+    Replaces deprecated on_event handlers. Runs startup code before yield,
+    and shutdown code after yield.
+    """
+    # Startup
+    logger.info(f"🚀 {settings.APP_NAME} v{settings.VERSION} starting...")
+    logger.info(f"📊 Debug mode: {settings.DEBUG}")
+    logger.info(f"🌐 CORS origins: {settings.CORS_ORIGINS}")
+    
+    yield  # Application runs here
+    
+    # Shutdown
+    logger.info(f"👋 {settings.APP_NAME} shutting down...")
+
+
+# Import routers after logging is set up
 from app.routers import (
     health,
     categorize,
@@ -37,16 +71,14 @@ from app.routers import (
 # APPLICATION INITIALIZATION
 # =============================================================================
 
-# Initialize logging
-setup_logging()
-
-# Create FastAPI application instance
+# Create FastAPI application instance with lifespan
 app = FastAPI(
     title=settings.APP_NAME,
     description="AI-powered Personal Finance Intelligence Engine",
     version=settings.VERSION,
     docs_url="/docs" if settings.DEBUG else None,
     redoc_url="/redoc" if settings.DEBUG else None,
+    lifespan=lifespan,
 )
 
 # =============================================================================
@@ -118,39 +150,6 @@ async def root():
         ],
     }
 
-
-# =============================================================================
-# STARTUP AND SHUTDOWN EVENTS
-# =============================================================================
-
-@app.on_event("startup")
-async def startup_event():
-    """
-    @brief Application startup handler.
-    
-    @description
-    Runs when the FastAPI application starts. Used for initialization
-    tasks like loading rule files, warming up caches, etc.
-    """
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"🚀 {settings.APP_NAME} v{settings.VERSION} starting...")
-    logger.info(f"📊 Debug mode: {settings.DEBUG}")
-    logger.info(f"🌐 CORS origins: {settings.CORS_ORIGINS}")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """
-    @brief Application shutdown handler.
-    
-    @description
-    Runs when the FastAPI application is shutting down.
-    Used for cleanup tasks.
-    """
-    import logging
-    logger = logging.getLogger(__name__)
-    logger.info(f"👋 {settings.APP_NAME} shutting down...")
 
 
 # =============================================================================
