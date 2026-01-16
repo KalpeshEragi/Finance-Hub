@@ -89,7 +89,7 @@ const deductionsSchema = new Schema({
     homeLoanInterest: { type: Number, default: 0, min: 0, max: 200000 },
     hra: { type: Number, default: 0, min: 0 },
     lta: { type: Number, default: 0, min: 0 },
-    standardDeduction: { type: Number, default: 50000, min: 0, max: 50000 },
+    standardDeduction: { type: Number, default: 75000, min: 0, max: 75000 },
     professionalTax: { type: Number, default: 0, min: 0, max: 5000 },
     nps: { type: Number, default: 0, min: 0, max: 50000 },
 }, { _id: false });

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { SubscriptionCard } from "./subscription-card"
-import { Search, Plus, Filter, SlidersHorizontal } from "lucide-react"
+import { Search, Plus, Filter, SlidersHorizontal, Loader2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,153 +15,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu"
+import { type RecurringSubscription } from "@/lib/api/recurrings"
 
-const subscriptions = [
-  {
-    id: "1",
-    name: "Netflix",
-    icon: "🎬",
-    category: "Entertainment",
-    amount: 649,
-    billingCycle: "monthly" as const,
-    nextBillingDate: new Date(2026, 0, 18),
-    color: "#E50914",
-    isActive: true,
-    reminder: true,
-  },
-  {
-    id: "2",
-    name: "Spotify Premium",
-    icon: "🎵",
-    category: "Entertainment",
-    amount: 119,
-    billingCycle: "monthly" as const,
-    nextBillingDate: new Date(2026, 0, 22),
-    color: "#1DB954",
-    isActive: true,
-    reminder: true,
-  },
-  {
-    id: "3",
-    name: "Amazon Prime",
-    icon: "📦",
-    category: "Shopping",
-    amount: 1499,
-    billingCycle: "yearly" as const,
-    nextBillingDate: new Date(2026, 3, 15),
-    color: "#FF9900",
-    isActive: true,
-    reminder: false,
-  },
-  {
-    id: "4",
-    name: "Gym Membership",
-    icon: "💪",
-    category: "Health & Fitness",
-    amount: 2500,
-    billingCycle: "monthly" as const,
-    nextBillingDate: new Date(2026, 0, 20),
-    color: "#FF5722",
-    isActive: true,
-    reminder: true,
-  },
-  {
-    id: "5",
-    name: "Jio Fiber",
-    icon: "📶",
-    category: "Utilities",
-    amount: 1199,
-    billingCycle: "monthly" as const,
-    nextBillingDate: new Date(2026, 0, 25),
-    color: "#0A2351",
-    isActive: true,
-    reminder: true,
-  },
-  {
-    id: "6",
-    name: "Disney+ Hotstar",
-    icon: "✨",
-    category: "Entertainment",
-    amount: 299,
-    billingCycle: "monthly" as const,
-    nextBillingDate: new Date(2026, 0, 28),
-    color: "#1A73E8",
-    isActive: true,
-    reminder: false,
-  },
-  {
-    id: "7",
-    name: "YouTube Premium",
-    icon: "▶️",
-    category: "Entertainment",
-    amount: 129,
-    billingCycle: "monthly" as const,
-    nextBillingDate: new Date(2026, 1, 3),
-    color: "#FF0000",
-    isActive: true,
-    reminder: false,
-  },
-  {
-    id: "8",
-    name: "iCloud Storage",
-    icon: "☁️",
-    category: "Cloud Storage",
-    amount: 75,
-    billingCycle: "monthly" as const,
-    nextBillingDate: new Date(2026, 0, 17),
-    color: "#007AFF",
-    isActive: true,
-    reminder: true,
-  },
-  {
-    id: "9",
-    name: "Notion Pro",
-    icon: "📝",
-    category: "Productivity",
-    amount: 800,
-    billingCycle: "monthly" as const,
-    nextBillingDate: new Date(2026, 1, 8),
-    color: "#000000",
-    isActive: false,
-    reminder: false,
-  },
-  {
-    id: "10",
-    name: "Swiggy One",
-    icon: "🍔",
-    category: "Food & Delivery",
-    amount: 149,
-    billingCycle: "monthly" as const,
-    nextBillingDate: new Date(2026, 0, 30),
-    color: "#FC8019",
-    isActive: true,
-    reminder: false,
-  },
-  {
-    id: "11",
-    name: "Zerodha",
-    icon: "📈",
-    category: "Finance",
-    amount: 200,
-    billingCycle: "monthly" as const,
-    nextBillingDate: new Date(2026, 1, 1),
-    color: "#387ED1",
-    isActive: true,
-    reminder: true,
-  },
-  {
-    id: "12",
-    name: "Electricity Bill",
-    icon: "⚡",
-    category: "Utilities",
-    amount: 1800,
-    billingCycle: "monthly" as const,
-    nextBillingDate: new Date(2026, 0, 19),
-    color: "#FFC107",
-    isActive: true,
-    reminder: true,
-  },
-]
+interface SubscriptionsGridProps {
+  subscriptions: RecurringSubscription[]
+  isLoading?: boolean
+  onAddClick?: () => void
+}
 
 const categories = [
   "All",
@@ -175,12 +35,12 @@ const categories = [
   "Cloud Storage",
 ]
 
-export function SubscriptionsGrid() {
+export function SubscriptionsGrid({ subscriptions, isLoading, onAddClick }: SubscriptionsGridProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedCategory, setSelectedCategory] = useState("All")
   const [sortBy, setSortBy] = useState<"name" | "amount" | "dueDate">("dueDate")
 
-  const filteredSubscriptions = subscriptions
+  const filteredSubscriptions = (subscriptions || [])
     .filter((sub) => {
       const matchesSearch = sub.name.toLowerCase().includes(searchQuery.toLowerCase())
       const matchesCategory = selectedCategory === "All" || sub.category === selectedCategory
@@ -189,11 +49,11 @@ export function SubscriptionsGrid() {
     .sort((a, b) => {
       if (sortBy === "name") return a.name.localeCompare(b.name)
       if (sortBy === "amount") return b.amount - a.amount
-      return a.nextBillingDate.getTime() - b.nextBillingDate.getTime()
+      return new Date(a.nextBillingDate).getTime() - new Date(b.nextBillingDate).getTime()
     })
 
-  const activeCount = subscriptions.filter((s) => s.isActive).length
-  const pausedCount = subscriptions.filter((s) => !s.isActive).length
+  const activeCount = (subscriptions || []).filter((s) => s.status === 'active').length
+  const pausedCount = (subscriptions || []).filter((s) => s.status !== 'active').length
 
   return (
     <Card className="bg-card border-border">
@@ -205,7 +65,7 @@ export function SubscriptionsGrid() {
               {activeCount} active, {pausedCount} paused
             </p>
           </div>
-          <Button className="bg-primary text-primary-foreground hover:bg-primary/90">
+          <Button className="bg-primary text-primary-foreground hover:bg-primary/90" onClick={onAddClick}>
             <Plus className="w-4 h-4 mr-2" />
             Add Subscription
           </Button>
@@ -281,9 +141,8 @@ export function SubscriptionsGrid() {
             <Badge
               key={category}
               variant={selectedCategory === category ? "default" : "outline"}
-              className={`cursor-pointer transition-colors ${
-                selectedCategory === category ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
-              }`}
+              className={`cursor-pointer transition-colors ${selectedCategory === category ? "bg-primary text-primary-foreground" : "hover:bg-secondary"
+                }`}
               onClick={() => setSelectedCategory(category)}
             >
               {category}
@@ -293,7 +152,11 @@ export function SubscriptionsGrid() {
       </CardHeader>
 
       <CardContent>
-        {filteredSubscriptions.length === 0 ? (
+        {isLoading ? (
+          <div className="flex justify-center py-12">
+            <Loader2 className="w-8 h-8 text-primary animate-spin" />
+          </div>
+        ) : filteredSubscriptions.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-muted-foreground">No subscriptions found</p>
           </div>

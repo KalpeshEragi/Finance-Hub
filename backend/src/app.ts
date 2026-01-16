@@ -37,6 +37,8 @@ import goalsRoutes from './routes/goals.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import alertsRoutes from './routes/alerts.routes';
 import categorizationRoutes from './routes/categorization.routes';
+import recurringRoutes from './routes/recurring.routes';
+import investmentRoutes from './routes/investment.routes';
 import { getRegisteredRoutes } from './utils/routeRegistry'
 
 // Import middleware
@@ -181,6 +183,12 @@ function createApp(): Express {
     // AI categorization (protected)
     app.use('/categorization', categorizationRoutes);
 
+    // Recurring subscriptions (protected)
+    app.use('/recurrings', recurringRoutes);
+
+    // Investment holdings (protected)
+    app.use('/investments', investmentRoutes);
+
     // ===========================================================================
     // DEVELOPMENT UTILITIES
     // ===========================================================================
@@ -194,8 +202,8 @@ function createApp(): Express {
         app.get('/__routes', (_req, res) => {
             const routes = getRegisteredRoutes()
             res.json({
-            count: routes.length,
-            routes,
+                count: routes.length,
+                routes,
             })
         })
     }

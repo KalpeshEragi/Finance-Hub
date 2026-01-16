@@ -238,9 +238,9 @@ export const TAX_SLABS = {
     ],
     NEW: [
         { min: 0, max: 300000, rate: 0 },
-        { min: 300001, max: 600000, rate: 5 },
-        { min: 600001, max: 900000, rate: 10 },
-        { min: 900001, max: 1200000, rate: 15 },
+        { min: 300001, max: 700000, rate: 5 },
+        { min: 700001, max: 1000000, rate: 10 },
+        { min: 1000001, max: 1200000, rate: 15 },
         { min: 1200001, max: 1500000, rate: 20 },
         { min: 1500001, max: Infinity, rate: 30 },
     ],
@@ -261,7 +261,8 @@ export const DEDUCTION_LIMITS: Partial<Record<string, number>> = {
     homeLoanInterest: 200000,
     hra: 0, // Calculated based on formula
     lta: 0, // Actual expenses or exemption, whichever is lower
-    standardDeduction: 50000,
+    standardDeductionOld: 50000,
+    standardDeductionNew: 75000,
     professionalTax: 5000,
     nps: 50000, // Under 80CCD(1B)
 };

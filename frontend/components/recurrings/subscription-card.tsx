@@ -6,25 +6,33 @@ import { Button } from "@/components/ui/button"
 import { MoreHorizontal, Bell, BellOff, AlertCircle } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { type RecurringSubscription } from "@/lib/api/recurrings"
 
 interface SubscriptionCardProps {
-  subscription: {
-    id: string
-    name: string
-    icon: string
-    category: string
-    amount: number
-    billingCycle: "monthly" | "yearly" | "weekly"
-    nextBillingDate: Date
-    color: string
-    isActive: boolean
-    reminder: boolean
-  }
+  subscription: RecurringSubscription
 }
+
+// Map categories to icons and colors
+const CATEGORY_MAP: Record<string, { icon: string; color: string }> = {
+  'Entertainment': { icon: '🎬', color: '#E50914' },
+  'Music': { icon: '🎵', color: '#1DB954' },
+  'Shopping': { icon: '📦', color: '#FF9900' },
+  'Health & Fitness': { icon: '💪', color: '#FF5722' },
+  'Utilities': { icon: '📶', color: '#0A2351' },
+  'Food & Delivery': { icon: '🍔', color: '#FC8019' },
+  'Productivity': { icon: '📝', color: '#000000' },
+  'Finance': { icon: '📈', color: '#387ED1' },
+  'Cloud Storage': { icon: '☁️', color: '#007AFF' },
+  'Default': { icon: '💳', color: '#6366F1' }
+};
 
 export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
   const today = new Date()
-  const daysUntilRenewal = Math.ceil((subscription.nextBillingDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  const nextBillingDate = new Date(subscription.nextBillingDate)
+  const daysUntilRenewal = Math.ceil((nextBillingDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+
+  const { icon, color } = CATEGORY_MAP[subscription.category] || CATEGORY_MAP['Default'];
+  const isActive = subscription.status === 'active';
 
   const getUrgencyColor = (days: number) => {
     if (days <= 3) return "bg-red-500/20 text-red-400 border-red-500/30"
@@ -33,9 +41,9 @@ export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
   }
 
   const getProgressWidth = (days: number) => {
-    const maxDays = subscription.billingCycle === "monthly" ? 30 : subscription.billingCycle === "yearly" ? 365 : 7
+    const maxDays = subscription.frequency === "monthly" ? 30 : subscription.frequency === "yearly" ? 365 : 7
     const progress = ((maxDays - days) / maxDays) * 100
-    return Math.min(progress, 100)
+    return Math.max(0, Math.min(progress, 100))
   }
 
   const getProgressColor = (days: number) => {
@@ -52,7 +60,7 @@ export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
     <Card
       className={cn(
         "bg-card border-border hover:border-primary/30 transition-all duration-200 group",
-        !subscription.isActive && "opacity-60",
+        !isActive && "opacity-60",
       )}
     >
       <CardContent className="p-4">
@@ -60,16 +68,16 @@ export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
           <div className="flex items-center gap-3">
             <div
               className="w-12 h-12 rounded-xl flex items-center justify-center text-xl"
-              style={{ backgroundColor: subscription.color + "20" }}
+              style={{ backgroundColor: color + "20" }}
             >
-              {subscription.icon}
+              {icon}
             </div>
             <div>
               <h3 className="font-medium text-foreground flex items-center gap-2">
                 {subscription.name}
-                {!subscription.isActive && (
+                {!isActive && (
                   <Badge variant="outline" className="text-xs bg-muted">
-                    Paused
+                    {subscription.status === 'paused' ? 'Paused' : 'Cancelled'}
                   </Badge>
                 )}
               </h3>
@@ -90,7 +98,7 @@ export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
             <DropdownMenuContent align="end">
               <DropdownMenuItem>Edit subscription</DropdownMenuItem>
               <DropdownMenuItem>View history</DropdownMenuItem>
-              <DropdownMenuItem>{subscription.isActive ? "Pause" : "Resume"}</DropdownMenuItem>
+              <DropdownMenuItem>{isActive ? "Pause" : "Resume"}</DropdownMenuItem>
               <DropdownMenuItem className="text-destructive">Cancel subscription</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -99,14 +107,14 @@ export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
         <div className="flex items-center justify-between mb-3">
           <div>
             <p className="text-2xl font-semibold text-foreground">₹{subscription.amount.toLocaleString("en-IN")}</p>
-            <p className="text-xs text-muted-foreground capitalize">/{subscription.billingCycle}</p>
+            <p className="text-xs text-muted-foreground capitalize">/{subscription.frequency}</p>
           </div>
 
           <div className={cn("px-3 py-1.5 rounded-lg border text-sm font-medium", getUrgencyColor(daysUntilRenewal))}>
-            {daysUntilRenewal === 0 ? (
+            {daysUntilRenewal <= 0 ? (
               <span className="flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5" />
-                Due today
+                Due {daysUntilRenewal === 0 ? 'today' : 'overdue'}
               </span>
             ) : daysUntilRenewal === 1 ? (
               "1 day left"
@@ -127,19 +135,11 @@ export function SubscriptionCard({ subscription }: SubscriptionCardProps) {
         </div>
 
         <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Next billing: {formatDate(subscription.nextBillingDate)}</span>
+          <span>Next billing: {formatDate(nextBillingDate)}</span>
           <button className="flex items-center gap-1 hover:text-foreground transition-colors">
-            {subscription.reminder ? (
-              <>
-                <Bell className="w-3 h-3 text-primary" />
-                <span className="text-primary">Reminder on</span>
-              </>
-            ) : (
-              <>
-                <BellOff className="w-3 h-3" />
-                <span>Set reminder</span>
-              </>
-            )}
+            {/* Logic for reminder can be added later if stored in backend */}
+            <Bell className="w-3 h-3 text-primary" />
+            <span className="text-primary">Reminder on</span>
           </button>
         </div>
       </CardContent>
