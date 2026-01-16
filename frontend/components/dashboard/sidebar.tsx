@@ -14,6 +14,7 @@ import {
   Receipt,
   PiggyBank,
   Shield,
+  Building2,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -22,6 +23,7 @@ import { UserMenu } from "./user-menu"
 const mainNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
   { icon: ArrowLeftRight, label: "Transactions", href: "/dashboard/transactions" },
+  { icon: Building2, label: "Connect Bank", href: "/dashboard/connect-bank" },
   { icon: Wallet, label: "Accounts", href: "/dashboard/accounts" },
   { icon: TrendingUp, label: "Investments", href: "/dashboard/investments" },
   { icon: Tags, label: "Categories", href: "/dashboard/categories" },
