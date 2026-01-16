@@ -1,0 +1,217 @@
+{
+  "categories": {
+    "Food & Dining": {
+      "bucket": "wants",
+      "keywords": [
+        "swiggy", "zomato", "dominos", "pizza", "mcdonalds", "kfc", "burger",
+        "restaurant", "cafe", "coffee", "starbucks", "subway", "food", "dining",
+        "ubereats", "dunzo", "blinkit", "instamart", "zepto", "bigbasket", "grofers",
+        "bakery", "biryani", "dosa", "idli", "chaiwala", "bar", "pub"
+      ],
+      "confidence": 0.85
+    },
+    "Groceries": {
+      "bucket": "needs",
+      "keywords": [
+        "bigbasket", "dmart", "reliance fresh", "more", "grofers", "jiomart",
+        "grocery", "kirana", "supermarket", "vegetables", "fruits", "milk",
+        "provisions", "ration", "nature's basket", "star bazaar"
+      ],
+      "confidence": 0.90
+    },
+    "Transportation": {
+      "bucket": "needs",
+      "keywords": [
+        "uber", "ola", "rapido", "meru", "petrol", "diesel", "fuel", "hp",
+        "indian oil", "bharat petroleum", "shell", "metro", "bus", "railway",
+        "irctc", "redbus", "taxi", "auto", "parking", "toll", "fastag"
+      ],
+      "confidence": 0.88
+    },
+    "Utilities": {
+      "bucket": "needs",
+      "keywords": [
+        "electricity", "water", "gas", "piped gas", "mahanagar gas", "adani gas",
+        "tata power", "bses", "reliance energy", "bescom", "tangedco", "mseb",
+        "bill payment", "utility", "mobile recharge", "dth", "broadband",
+        "jio", "airtel", "vodafone", "vi", "bsnl", "act fibernet"
+      ],
+      "confidence": 0.92
+    },
+    "Rent & Housing": {
+      "bucket": "needs",
+      "keywords": [
+        "rent", "housing", "maintenance", "society", "apartment", "flat",
+        "landlord", "pg", "hostel", "accommodation", "housing society", 
+        "property tax", "municipal"
+      ],
+      "confidence": 0.95
+    },
+    "Healthcare": {
+      "bucket": "needs",
+      "keywords": [
+        "hospital", "clinic", "doctor", "medical", "pharmacy", "medicine",
+        "apollo", "fortis", "max healthcare", "medanta", "aiims", "practo",
+        "pharmeasy", "netmeds", "1mg", "tata 1mg", "diagnostic", "lab test",
+        "vaccination", "dental", "eye care", "optician", "lens"
+      ],
+      "confidence": 0.90
+    },
+    "Insurance": {
+      "bucket": "needs",
+      "keywords": [
+        "insurance", "lic", "hdfc life", "icici prudential", "sbi life",
+        "max life", "bajaj allianz", "star health", "digit insurance",
+        "policy", "premium", "term insurance", "health insurance"
+      ],
+      "confidence": 0.93
+    },
+    "Education": {
+      "bucket": "needs",
+      "keywords": [
+        "school", "college", "university", "tuition", "coaching", "byjus",
+        "unacademy", "vedantu", "coursera", "udemy", "skillshare", "books",
+        "stationery", "education", "exam fee", "admission"
+      ],
+      "confidence": 0.88
+    },
+    "Shopping": {
+      "bucket": "wants",
+      "keywords": [
+        "amazon", "flipkart", "myntra", "ajio", "nykaa", "meesho", "snapdeal",
+        "shopping", "mall", "fashion", "clothing", "apparel", "shoes",
+        "accessories", "jewellery", "tanishq", "malabar", "lifestyle",
+        "westside", "pantaloons", "shoppers stop", "central", "reliance trends"
+      ],
+      "confidence": 0.82
+    },
+    "Entertainment": {
+      "bucket": "wants",
+      "keywords": [
+        "netflix", "amazon prime", "hotstar", "zee5", "sony liv", "jiocinema",
+        "spotify", "gaana", "wynk", "youtube premium", "movie", "pvr", "inox",
+        "cinepolis", "bookmyshow", "gaming", "playstation", "xbox", "steam"
+      ],
+      "confidence": 0.85
+    },
+    "Travel & Vacation": {
+      "bucket": "wants",
+      "keywords": [
+        "makemytrip", "goibibo", "cleartrip", "yatra", "easemytrip", "airbnb",
+        "oyo", "hotel", "flight", "airline", "indigo", "spicejet", "air india",
+        "vistara", "goair", "akasa", "booking.com", "trivago", "agoda",
+        "tourism", "travel", "vacation", "trip", "resort"
+      ],
+      "confidence": 0.87
+    },
+    "Personal Care": {
+      "bucket": "wants",
+      "keywords": [
+        "salon", "spa", "parlour", "beauty", "grooming", "lakme", "jawed habib",
+        "naturals", "haircut", "facial", "massage", "cosmetics", "makeup"
+      ],
+      "confidence": 0.80
+    },
+    "Fitness & Sports": {
+      "bucket": "wants",
+      "keywords": [
+        "gym", "fitness", "cult", "cure.fit", "gold gym", "anytime fitness",
+        "yoga", "sports", "decathlon", "equipment", "membership"
+      ],
+      "confidence": 0.80
+    },
+    "Investments": {
+      "bucket": "savings",
+      "keywords": [
+        "mutual fund", "sip", "zerodha", "groww", "upstox", "kuvera", "paytm money",
+        "angel broking", "icici direct", "hdfc securities", "kotak securities",
+        "fd", "fixed deposit", "ppf", "nps", "elss", "stock", "shares",
+        "bonds", "investment", "gold", "sovereign gold bond"
+      ],
+      "confidence": 0.95
+    },
+    "Savings": {
+      "bucket": "savings",
+      "keywords": [
+        "savings account", "recurring deposit", "rd", "bank transfer",
+        "savings", "emergency fund", "reserve"
+      ],
+      "confidence": 0.90
+    },
+    "EMI & Loan": {
+      "bucket": "needs",
+      "keywords": [
+        "emi", "loan", "home loan", "personal loan", "car loan", "education loan",
+        "credit card", "hdfc bank", "icici bank", "sbi", "axis bank", "kotak",
+        "yes bank", "idfc first", "bajaj finserv", "tata capital"
+      ],
+      "confidence": 0.93
+    },
+    "Charity & Donations": {
+      "bucket": "savings",
+      "keywords": [
+        "charity", "donation", "ngo", "giveindia", "milaap", "ketto",
+        "temple", "church", "mosque", "religious", "tithe", "zakat"
+      ],
+      "confidence": 0.85
+    },
+    "Government & Taxes": {
+      "bucket": "needs",
+      "keywords": [
+        "income tax", "gst", "stamp duty", "registration", "government",
+        "municipal", "property tax", "road tax", "fine", "challan",
+        "passport", "visa", "aadhar", "pan card"
+      ],
+      "confidence": 0.90
+    },
+    "Childcare": {
+      "bucket": "needs",
+      "keywords": [
+        "daycare", "creche", "babysitter", "nanny", "child care",
+        "kids school", "playschool", "kindergarten"
+      ],
+      "confidence": 0.88
+    },
+    "Pet Care": {
+      "bucket": "wants",
+      "keywords": [
+        "pet", "vet", "veterinary", "pet food", "pet shop", "pet store",
+        "dog", "cat", "grooming"
+      ],
+      "confidence": 0.82
+    },
+    "Gifts": {
+      "bucket": "wants",
+      "keywords": [
+        "gift", "present", "birthday", "anniversary", "wedding gift",
+        "ferns n petals", "igp", "archies"
+      ],
+      "confidence": 0.75
+    },
+    "ATM Withdrawal": {
+      "bucket": "needs",
+      "keywords": [
+        "atm", "withdrawal", "cash withdrawal", "atm cash"
+      ],
+      "confidence": 0.70
+    },
+    "Bank Charges": {
+      "bucket": "needs",
+      "keywords": [
+        "bank charges", "service charge", "annual fee", "maintenance charge",
+        "sms charges", "debit card", "cheque book"
+      ],
+      "confidence": 0.88
+    }
+  },
+  "default_category": "Uncategorized",
+  "default_bucket": "wants",
+  "default_confidence": 0.30,
+  "metadata": {
+    "version": "1.0.0",
+    "last_updated": "2024-01-01",
+    "region": "India",
+    "currency": "INR",
+    "description": "Merchant keyword to category mapping for Indian personal finance"
+  }
+}
