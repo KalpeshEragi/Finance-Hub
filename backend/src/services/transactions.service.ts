@@ -113,6 +113,121 @@ export async function createBulkTransactions(
     return results;
 }
 
+/**
+ * @interface StatementTransaction
+ * @description Transaction format from AI Engine statement parser.
+ */
+interface StatementTransaction {
+    date: string;
+    description: string;
+    amount: number;
+    type: 'income' | 'expense';
+    reference?: string;
+    balance?: number;
+}
+
+/**
+ * @interface StatementImportPayload
+ * @description Payload format from AI Engine /parse/statement endpoint.
+ */
+interface StatementImportPayload {
+    source: 'bank_statement';
+    transactions: StatementTransaction[];
+}
+
+/**
+ * @function importStatementTransactions
+ * @description Imports parsed transactions from AI Engine statement parser.
+ * 
+ * This function:
+ * 1. Receives normalized transactions from AI Engine
+ * 2. Auto-categorizes using AI Engine /categorize endpoint
+ * 3. Saves transactions with categories to database
+ * 
+ * @param userId - User ID
+ * @param payload - Parsed statement from AI Engine
+ * @returns Import summary with counts and any errors
+ */
+export async function importStatementTransactions(
+    userId: string,
+    payload: StatementImportPayload
+): Promise<{
+    created: number;
+    failed: number;
+    categorized: number;
+    errors: Array<{ row: number; error: string }>;
+}> {
+    const results = {
+        created: 0,
+        failed: 0,
+        categorized: 0,
+        errors: [] as Array<{ row: number; error: string }>,
+    };
+
+    if (!payload.transactions || payload.transactions.length === 0) {
+        return results;
+    }
+
+    // Prepare transactions for categorization
+    const transactionsToCateg = payload.transactions.map((t, idx) => ({
+        id: `temp_${idx}`,
+        description: t.description || '',
+        merchant: '',  // Extract from description if possible
+        amount: t.amount,
+        type: t.type,
+    }));
+
+    // Call AI Engine for categorization
+    let categorizations: Record<string, string> = {};
+    try {
+        const categResult = await aiClient.categorize(transactionsToCateg);
+        if (categResult.results) {
+            for (const r of categResult.results) {
+                categorizations[r.transactionId] = r.category;
+            }
+            results.categorized = categResult.results.length;
+        }
+    } catch (error) {
+        console.error('AI categorization failed, using defaults:', error);
+        // Continue without categorization
+    }
+
+    // Save each transaction to database
+    for (let i = 0; i < payload.transactions.length; i++) {
+        const txn = payload.transactions[i];
+
+        try {
+            if (!txn) {
+                throw new Error('Empty transaction data');
+            }
+
+            // Get category from AI Engine result or default
+            const category = categorizations[`temp_${i}`] || 'Uncategorized';
+
+            await Transaction.create({
+                userId: new mongoose.Types.ObjectId(userId),
+                amount: txn.amount,
+                type: txn.type,
+                category: category,
+                description: txn.description || '',
+                date: txn.date ? new Date(txn.date) : new Date(),
+                merchant: '',  // Could extract from description
+                isAutoCategorized: !!categorizations[`temp_${i}`],
+            });
+
+            results.created++;
+        } catch (error) {
+            results.failed++;
+            results.errors.push({
+                row: i + 1,
+                error: error instanceof Error ? error.message : 'Unknown error',
+            });
+        }
+    }
+
+    return results;
+}
+
 // =============================================================================
 // READ OPERATIONS
 // =============================================================================
@@ -397,6 +512,7 @@ function formatTransactionForResponse(
 export const transactionsService = {
     createTransaction,
     createBulkTransactions,
+    importStatementTransactions,
     getTransactions,
     getTransactionById,
     updateTransaction,

@@ -66,6 +66,45 @@ export const createBulk = asyncHandler(async (req: Request, res: Response) => {
     });
 });
 
+/**
+ * @controller importStatement
+ * @route POST /transactions/import
+ * @description Imports parsed transactions from AI Engine statement parser.
+ * @auth Required
+ * 
+ * @example
+ * // Request body from AI Engine:
+ * {
+ *   "source": "bank_statement",
+ *   "transactions": [
+ *     { "date": "2024-01-15", "description": "SALARY", "amount": 50000, "type": "income" }
+ *   ]
+ * }
+ */
+export const importStatement = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const { source, transactions } = req.body;
+
+    if (!transactions || !Array.isArray(transactions)) {
+        res.status(HTTP_STATUS.BAD_REQUEST).json({
+            success: false,
+            message: 'Invalid payload: transactions array required',
+        });
+        return;
+    }
+
+    const result = await transactionsService.importStatementTransactions(userId, {
+        source: source || 'bank_statement',
+        transactions,
+    });
+
+    res.status(HTTP_STATUS.CREATED).json({
+        success: true,
+        message: `Imported ${result.created} transactions (${result.categorized} auto-categorized)`,
+        data: result,
+    });
+});
+
 // =============================================================================
 // READ
 // =============================================================================
@@ -176,6 +215,7 @@ export const remove = asyncHandler(async (req: Request, res: Response) => {
 export const transactionsController = {
     create,
     createBulk,
+    importStatement,
     getAll,
     getById,
     update,
