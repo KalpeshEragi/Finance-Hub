@@ -1,0 +1,49 @@
+/**
+ * @file tax.routes.ts
+ * @description Tax estimation routes.
+ * 
+ * Routes:
+ * - POST /tax/income - Add/update income
+ * - GET /tax/estimate - Get tax estimates for both regimes
+ * - GET /tax/regime - Get current regime with comparison
+ * - GET /tax/deductions - Get deductions with limits
+ */
+
+import { Router } from 'express';
+import { taxController } from '../controllers/tax.controller';
+import { authenticate } from '../middleware/auth.middleware';
+
+const router = Router();
+
+// All tax routes require authentication
+router.use(authenticate);
+
+/**
+ * @route POST /tax/income
+ * @description Add or update income
+ * @access Private
+ */
+router.post('/income', taxController.addIncome);
+
+/**
+ * @route GET /tax/estimate
+ * @description Get tax estimates for both regimes
+ * @access Private
+ */
+router.get('/estimate', taxController.getEstimate);
+
+/**
+ * @route GET /tax/regime
+ * @description Get current regime with comparison
+ * @access Private
+ */
+router.get('/regime', taxController.getRegime);
+
+/**
+ * @route GET /tax/deductions
+ * @description Get deductions with limits and suggestions
+ * @access Private
+ */
+router.get('/deductions', taxController.getDeductions);
+
+export default router;
