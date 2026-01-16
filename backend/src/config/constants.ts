@@ -247,6 +247,26 @@ export const TAX_SLABS = {
 } as const;
 
 // =============================================================================
+// DEDUCTION LIMITS (INDIA-SPECIFIC)
+// =============================================================================
+
+/**
+ * @constant DEDUCTION_LIMITS
+ * @description Maximum deduction limits under various sections of Indian Income Tax Act.
+ */
+export const DEDUCTION_LIMITS: Partial<Record<string, number>> = {
+    section80C: 150000,
+    section80D: 25000, // 50000 for senior citizens
+    section80G: 0, // No fixed limit (varies by donation type)
+    homeLoanInterest: 200000,
+    hra: 0, // Calculated based on formula
+    lta: 0, // Actual expenses or exemption, whichever is lower
+    standardDeduction: 50000,
+    professionalTax: 5000,
+    nps: 50000, // Under 80CCD(1B)
+};
+
+// =============================================================================
 // CREDIT SCORE FACTORS
 // =============================================================================
 
