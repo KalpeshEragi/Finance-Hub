@@ -118,8 +118,8 @@ export function errorHandler(
     console.error('❌ Error:', err);
 
     // Default error response
-    let statusCode = HTTP_STATUS.INTERNAL_SERVER_ERROR;
-    let message = ERROR_MESSAGES.INTERNAL_ERROR;
+    let statusCode: number = HTTP_STATUS.INTERNAL_SERVER_ERROR;
+    let message: string = ERROR_MESSAGES.INTERNAL_ERROR;
     let code: string | undefined;
     let details: unknown = undefined;
 

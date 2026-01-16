@@ -82,19 +82,7 @@ const transactionSchema = new Schema<ITransaction, TransactionModel>(
             type: String,
             required: [true, 'Category is required'],
             trim: true,
-            validate: {
-                validator: function (this: ITransaction, value: string): boolean {
-                    // Validate against allowed categories based on type
-                    const type = this.type as TransactionType;
-                    const allowedCategories = type === 'income'
-                        ? TRANSACTION_CATEGORIES.INCOME
-                        : TRANSACTION_CATEGORIES.EXPENSE;
-
-                    // Allow custom categories (for flexibility) or predefined ones
-                    return value.length > 0 && value.length <= 50;
-                },
-                message: 'Invalid category',
-            },
+            maxlength: [50, 'Category cannot exceed 50 characters'],
         },
 
         /**
@@ -146,10 +134,10 @@ const transactionSchema = new Schema<ITransaction, TransactionModel>(
         collection: 'transactions',
 
         toJSON: {
-            transform: (_doc, ret) => {
-                ret.id = ret._id;
-                delete ret._id;
-                delete ret.__v;
+            transform: (_doc: unknown, ret: Record<string, unknown>) => {
+                ret['id'] = ret['_id'];
+                delete ret['_id'];
+                delete ret['__v'];
                 return ret;
             },
         },

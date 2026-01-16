@@ -160,10 +160,10 @@ const creditSnapshotSchema = new Schema<ICreditSnapshot>(
         collection: 'creditSnapshots',
 
         toJSON: {
-            transform: (_doc, ret) => {
-                ret.id = ret._id;
-                delete ret._id;
-                delete ret.__v;
+            transform: (_doc: unknown, ret: Record<string, unknown>) => {
+                ret['id'] = ret['_id'];
+                delete ret['_id'];
+                delete ret['__v'];
                 return ret;
             },
         },
@@ -314,4 +314,6 @@ export function getRatingFromScore(score: number): CreditRating {
 const CreditSnapshot = mongoose.model<ICreditSnapshot>('CreditSnapshot', creditSnapshotSchema);
 
 export default CreditSnapshot;
-export { CreditSnapshot, creditSnapshotSchema, ICreditSnapshot, ICreditSnapshotBase };
+export { CreditSnapshot, creditSnapshotSchema };
+
+

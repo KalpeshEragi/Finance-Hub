@@ -126,7 +126,7 @@ export function validate(schema: ValidationSchema) {
                     body[field] = value;
                 }
                 if (fieldSchema.lowercase) {
-                    value = value.toLowerCase();
+                    value = (value as string).toLowerCase();
                     body[field] = value;
                 }
             }
