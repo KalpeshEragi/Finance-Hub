@@ -188,10 +188,10 @@ const goalSchema = new Schema<IGoal>(
 
         toJSON: {
             virtuals: true,
-            transform: (_doc, ret) => {
-                ret.id = ret._id;
-                delete ret._id;
-                delete ret.__v;
+            transform: (_doc: unknown, ret: Record<string, unknown>) => {
+                ret['id'] = ret['_id'];
+                delete ret['_id'];
+                delete ret['__v'];
                 return ret;
             },
         },
@@ -322,4 +322,5 @@ goalSchema.methods.toPublicJSON = function () {
 const Goal = mongoose.model<IGoal>('Goal', goalSchema);
 
 export default Goal;
-export { Goal, goalSchema, IGoal, IGoalBase, GoalStatus };
+export { Goal, goalSchema };
+
