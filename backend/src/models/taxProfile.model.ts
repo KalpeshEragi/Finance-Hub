@@ -159,10 +159,10 @@ const taxProfileSchema = new Schema<ITaxProfile>(
 
         toJSON: {
             virtuals: true,
-            transform: (_doc, ret) => {
-                ret.id = ret._id;
-                delete ret._id;
-                delete ret.__v;
+            transform: (_doc: unknown, ret: Record<string, unknown>) => {
+                ret['id'] = ret['_id'];
+                delete ret['_id'];
+                delete ret['__v'];
                 return ret;
             },
         },
@@ -299,4 +299,5 @@ taxProfileSchema.methods.toPublicJSON = function () {
 const TaxProfile = mongoose.model<ITaxProfile>('TaxProfile', taxProfileSchema);
 
 export default TaxProfile;
-export { TaxProfile, taxProfileSchema, ITaxProfile, ITaxProfileBase };
+export { TaxProfile, taxProfileSchema };
+

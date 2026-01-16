@@ -116,11 +116,11 @@ const userSchema = new Schema<IUser, UserModel, IUserMethods>(
 
         // Transform output when converting to JSON
         toJSON: {
-            transform: (_doc, ret) => {
-                ret.id = ret._id;
-                delete ret._id;
-                delete ret.__v;
-                delete ret.password;
+            transform: (_doc: unknown, ret: Record<string, unknown>) => {
+                ret['id'] = ret['_id'];
+                delete ret['_id'];
+                delete ret['__v'];
+                delete ret['password'];
                 return ret;
             },
         },
@@ -148,19 +148,14 @@ userSchema.index({ email: 1 });
  * Only runs if password field has been modified (not on every save).
  * This prevents re-hashing an already-hashed password.
  */
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
     // Only hash the password if it has been modified (or is new)
     if (!this.isModified('password')) {
-        return next();
+        return;
     }
 
-    try {
-        // Hash the password
-        this.password = await hashPassword(this.password);
-        next();
-    } catch (error) {
-        next(error as Error);
-    }
+    // Hash the password
+    this.password = await hashPassword(this.password);
 });
 
 // =============================================================================

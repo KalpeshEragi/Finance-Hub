@@ -167,10 +167,10 @@ const alertSchema = new Schema<IAlert>(
         collection: 'alerts',
 
         toJSON: {
-            transform: (_doc, ret) => {
-                ret.id = ret._id;
-                delete ret._id;
-                delete ret.__v;
+            transform: (_doc: unknown, ret: Record<string, unknown>) => {
+                ret['id'] = ret['_id'];
+                delete ret['_id'];
+                delete ret['__v'];
                 return ret;
             },
         },
@@ -271,4 +271,5 @@ alertSchema.methods.toPublicJSON = function () {
 const Alert = mongoose.model<IAlert>('Alert', alertSchema);
 
 export default Alert;
-export { Alert, alertSchema, IAlert, IAlertBase, AlertType };
+export { Alert, alertSchema };
+

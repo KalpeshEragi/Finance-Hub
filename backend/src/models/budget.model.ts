@@ -14,8 +14,7 @@
  * The combination of userId + category + month + year must be unique.
  */
 
-import mongoose, { Schema, Model, Document, Types } from 'mongoose';
-import { TRANSACTION_CATEGORIES } from '../config/constants';
+import mongoose, { Schema, Document, Types } from 'mongoose';
 
 // =============================================================================
 // INTERFACE DEFINITIONS
@@ -128,10 +127,10 @@ const budgetSchema = new Schema<IBudget>(
         collection: 'budgets',
 
         toJSON: {
-            transform: (_doc, ret) => {
-                ret.id = ret._id;
-                delete ret._id;
-                delete ret.__v;
+            transform: (_doc: unknown, ret: Record<string, unknown>) => {
+                ret['id'] = ret['_id'];
+                delete ret['_id'];
+                delete ret['__v'];
                 return ret;
             },
         },
@@ -238,4 +237,5 @@ budgetSchema.methods.isNearLimit = function (spent: number): boolean {
 const Budget = mongoose.model<IBudget>('Budget', budgetSchema);
 
 export default Budget;
-export { Budget, budgetSchema, IBudget, IBudgetBase };
+export { Budget, budgetSchema };
+
