@@ -42,6 +42,117 @@ Tech Stack
 
 ---
 
+## Ideal Directory Structure
+
+```plaintext
+finmirror/
+├── README.md
+├── docker-compose.yml          # optional (local dev)
+├── .env.example
+├── package.json                # root scripts (optional)
+│
+├── frontend/                   # React (JavaScript + SWC)
+│   ├── package.json
+│   ├── vite.config.js
+│   ├── tailwind.config.js
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── App.jsx
+│   │   │   ├── routes.jsx
+│   │   │   └── ProtectedRoute.jsx
+│   │   │
+│   │   ├── pages/
+│   │   │   ├── Login.jsx
+│   │   │   ├── Dashboard.jsx
+│   │   │   ├── Transactions.jsx
+│   │   │   ├── Budget.jsx
+│   │   │   ├── Tax.jsx
+│   │   │   ├── Credit.jsx
+│   │   │   └── Goals.jsx
+│   │   │
+│   │   ├── components/
+│   │   │   ├── charts/
+│   │   │   │   ├── ExpensePie.jsx
+│   │   │   │   ├── MonthlyTrend.jsx
+│   │   │   │   └── SavingsGauge.jsx
+│   │   │   │
+│   │   │   ├── common/
+│   │   │   │   ├── Card.jsx
+│   │   │   │   ├── Button.jsx
+│   │   │   │   └── Alert.jsx
+│   │   │   │
+│   │   │   └── forms/
+│   │   │       ├── TransactionForm.jsx
+│   │   │       ├── BudgetForm.jsx
+│   │   │       └── GoalForm.jsx
+│   │   │
+│   │   ├── services/
+│   │   │   ├── api.js
+│   │   │   ├── auth.service.js
+│   │   │   ├── transaction.service.js
+│   │   │   ├── budget.service.js
+│   │   │   ├── tax.service.js
+│   │   │   └── credit.service.js
+│   │   │
+│   │   ├── hooks/
+│   │   │   ├── useAuth.js
+│   │   │   └── useFetch.js
+│   │   │
+│   │   └── utils/
+│   │       ├── formatCurrency.js
+│   │       └── date.js
+│   │
+│   └── public/
+│
+├── backend/                    # Node.js (NestJS / Express, TypeScript)
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── prisma/
+│   │   ├── schema.prisma
+│   │   └── migrations/
+│   │
+│   ├── src/
+│   │   ├── main.ts
+│   │   ├── app.module.ts
+│   │   │
+│   │   ├── modules/
+│   │   │   ├── auth/
+│   │   │   ├── transactions/
+│   │   │   ├── budget/
+│   │   │   ├── credit/
+│   │   │   ├── tax/
+│   │   │   └── goals/
+│   │   │
+│   │   ├── integrations/
+│   │   │   └── python/
+│   │   │       ├── python.client.ts
+│   │   │       └── python.dto.ts
+│   │   │
+│   │   └── config/
+│   │       ├── env.ts
+│   │       └── constants.ts
+│   │
+│   └── tests/
+│
+├── ai-engine/                  # Python (FastAPI)
+│   ├── requirements.txt
+│   ├── main.py
+│   ├── app/
+│   │   ├── routers/
+│   │   ├── services/
+│   │   ├── rules/
+│   │   └── models/
+│   └── tests/
+│
+└── docs/
+    ├── architecture.md
+    ├── api-contracts.md
+    ├── demo-flow.md
+    └── judge-faq.md
+
+```
+
+
 ## 🕒 MILESTONE TIMELINE (20 HOURS)
 
 ---
