@@ -14,7 +14,9 @@ import { authController } from '../controllers/auth.controller';
 import { authenticate } from '../middleware/auth.middleware';
 import { validate, authSchemas } from '../middleware/validate.middleware';
 
-const router = Router();
+import { createRouter } from '../utils/routeWrapper'
+
+const router = createRouter('/auth');
 
 // =============================================================================
 // PUBLIC ROUTES

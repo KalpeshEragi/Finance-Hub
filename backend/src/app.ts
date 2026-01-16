@@ -37,6 +37,7 @@ import goalsRoutes from './routes/goals.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import alertsRoutes from './routes/alerts.routes';
 import categorizationRoutes from './routes/categorization.routes';
+import { getRegisteredRoutes } from './utils/routeRegistry'
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middleware/error.middleware';
@@ -181,8 +182,8 @@ function createApp(): Express {
     app.use('/categorization', categorizationRoutes);
 
     // ===========================================================================
-// DEVELOPMENT UTILITIES
-// ===========================================================================
+    // DEVELOPMENT UTILITIES
+    // ===========================================================================
 
     /**
      * @route GET /__routes
@@ -190,33 +191,14 @@ function createApp(): Express {
      * Useful for generating Postman / Thunder Client collections.
      */
     if (process.env.NODE_ENV === 'development') {
-        app.get('/__routes', (_req: Request, res: Response) => {
-            const routes: Array<{ method: string; path: string }> = [];
-
-            // Express internal router stack (not typed publicly)
-            const router = (app as any)._router;
-
-            if (router && router.stack) {
-                router.stack.forEach((middleware: any) => {
-                    if (middleware.route) {
-                        const methods = Object.keys(middleware.route.methods);
-                        methods.forEach(method => {
-                            routes.push({
-                                method: method.toUpperCase(),
-                                path: middleware.route.path,
-                            });
-                        });
-                    }
-                });
-            }
-
-            res.status(200).json({
-                count: routes.length,
-                routes,
-            });
-        });
+        app.get('/__routes', (_req, res) => {
+            const routes = getRegisteredRoutes()
+            res.json({
+            count: routes.length,
+            routes,
+            })
+        })
     }
-
 
     // ===========================================================================
     // ERROR HANDLING
