@@ -44,8 +44,6 @@ const creditCards = [
 
 const bottomNavItems = [
   { icon: Compass, label: "Explore", href: "/dashboard/explore" },
-  { icon: HelpCircle, label: "Get help", href: "/dashboard/help" },
-  { icon: Settings, label: "Settings", href: "/dashboard/settings" },
 ]
 
 interface SidebarProps {
