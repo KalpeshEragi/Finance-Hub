@@ -314,6 +314,95 @@ export interface DeductionSuggestion {
     priority: 'high' | 'medium' | 'low';
 }
 
+/**
+ * @interface ITRRecommendation
+ * @description ITR Form selection recommendation.
+ */
+export interface ITRRecommendation {
+    /** Recommended ITR Form (e.g. ITR-1, ITR-2) */
+    form: string;
+
+    /** Reason for this recommendation */
+    reason: string;
+
+    /** Detailed description of the form's applicability */
+    description: string;
+}
+
+// =============================================================================
+// TAX GUIDANCE TYPES (Rule-Based System)
+// =============================================================================
+
+/**
+ * @interface TaxGuidanceInput
+ * @description Input for rule-based tax guidance.
+ */
+export interface TaxGuidanceInput {
+    /** Type of individual */
+    individualType: 'salaried' | 'self_employed' | 'business_owner';
+
+    /** Annual income range */
+    incomeRange: '0-5L' | '5-10L' | '10-15L' | '15-25L' | '25-50L' | '50L+';
+
+    /** Age group */
+    ageGroup: 'below_60' | '60_to_80' | 'above_80';
+
+    /** Regime preference */
+    regimePreference: 'not_decided' | 'old' | 'new';
+
+    /** Optional deductions (all default to false) */
+    deductions?: {
+        hasEPF?: boolean;
+        hasPPF?: boolean;
+        hasELSS?: boolean;
+        hasNPS?: boolean;
+        hasHomeLoan?: boolean;
+        hasEducationLoan?: boolean;
+        hasHealthInsurance?: boolean;
+    };
+}
+
+/**
+ * @interface TaxSavingSuggestion
+ * @description A single tax-saving suggestion.
+ */
+export interface TaxSavingSuggestion {
+    section: string;
+    title: string;
+    benefit: string;
+    maxDeduction: number;
+    applicable: boolean;
+    priority: 'high' | 'medium' | 'low';
+}
+
+/**
+ * @interface TaxGuidanceOutput
+ * @description Output from rule-based tax guidance.
+ */
+export interface TaxGuidanceOutput {
+    /** ITR Form recommendation */
+    itrForm: {
+        suggested: string;
+        reason: string;
+    };
+
+    /** Regime comparison */
+    regimeComparison: {
+        oldRegimeBenefits: string[];
+        newRegimeBenefits: string[];
+        recommendation: string;
+        estimatedDifference?: string;
+        isEstimate: true;
+    };
+
+    /** Tax saving suggestions */
+    suggestions: TaxSavingSuggestion[];
+
+    /** Disclaimers */
+    disclaimers: string[];
+}
+
+
 // =============================================================================
 // CONSTANTS
 // =============================================================================

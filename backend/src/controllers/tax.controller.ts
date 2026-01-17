@@ -29,6 +29,21 @@ export const addIncome = asyncHandler(async (req: Request, res: Response) => {
 });
 
 /**
+ * @controller updateProfile
+ * @route PATCH /tax/profile
+ * @description Updates tax profile (deductions).
+ * @auth Required
+ */
+export const updateProfile = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+    const { deductions } = req.body;
+
+    const result = await taxService.updateDeductions(userId, deductions);
+
+    res.status(HTTP_STATUS.OK).json(result);
+});
+
+/**
  * @controller getEstimate
  * @route GET /tax/estimate
  * @description Gets tax estimates for both regimes.
@@ -79,11 +94,51 @@ export const getDeductions = asyncHandler(async (req: Request, res: Response) =>
     });
 });
 
+export const getRecommendation = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+
+    const result = await taxService.getITRRecommendation(userId);
+
+    res.status(HTTP_STATUS.OK).json({
+        success: true,
+        data: result,
+    });
+});
+
+/**
+ * @controller getGuidance
+ * @route POST /tax/guidance
+ * @description Get rule-based tax guidance.
+ * @auth Required
+ */
+export const getGuidance = asyncHandler(async (req: Request, res: Response) => {
+    const input = req.body;
+
+    // Validate required fields
+    if (!input.individualType || !input.incomeRange || !input.ageGroup || !input.regimePreference) {
+        res.status(400).json({
+            success: false,
+            message: 'Missing required fields: individualType, incomeRange, ageGroup, regimePreference'
+        });
+        return;
+    }
+
+    const result = taxService.getTaxGuidance(input);
+
+    res.status(HTTP_STATUS.OK).json({
+        success: true,
+        data: result,
+    });
+});
+
 export const taxController = {
     addIncome,
+    updateProfile,
     getEstimate,
     getRegime,
     getDeductions,
+    getRecommendation,
+    getGuidance,
 };
 
 export default taxController;

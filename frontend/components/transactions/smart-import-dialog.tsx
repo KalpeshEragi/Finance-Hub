@@ -98,7 +98,7 @@ export function SmartImportDialog({ onSuccess }: SmartImportDialogProps) {
                             />
                         </div>
                         <div className="bg-secondary/20 p-3 rounded-lg text-xs text-muted-foreground">
-                            <strong>Supported:</strong> HDFC, SBI, ICICI, UPI, Generic
+                            <strong>Detects:</strong> PhonePe, GPay, Paytm, Amazon Pay, HDFC, SBI, ICICI, Credit/Debit Cards & 15+ categories
                         </div>
                     </div>
                 ) : (
@@ -108,13 +108,38 @@ export function SmartImportDialog({ onSuccess }: SmartImportDialogProps) {
                         </div>
 
                         <div className="space-y-3 border rounded-lg p-4 bg-card">
+                            {/* Payment Source (if detected) */}
+                            {(result.paymentApp || result.bank || result.cardType) && (
+                                <div className="flex justify-between items-center pb-2 border-b">
+                                    <span className="text-sm text-muted-foreground">Payment Source</span>
+                                    <div className="flex gap-1.5 flex-wrap justify-end">
+                                        {result.paymentApp && (
+                                            <Badge variant="outline" className="border-green-500 text-green-600 bg-green-500/10">
+                                                {result.paymentApp}
+                                            </Badge>
+                                        )}
+                                        {result.bank && (
+                                            <Badge variant="outline" className="border-blue-500 text-blue-600 bg-blue-500/10">
+                                                {result.bank}
+                                            </Badge>
+                                        )}
+                                        {result.cardType && (
+                                            <Badge variant="outline" className="border-amber-500 text-amber-600 bg-amber-500/10">
+                                                {result.cardType}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                             <div className="flex justify-between items-center pb-2 border-b">
                                 <span className="text-sm text-muted-foreground">Merchant</span>
                                 <span className="font-semibold">{result.merchant}</span>
                             </div>
                             <div className="flex justify-between items-center pb-2 border-b">
                                 <span className="text-sm text-muted-foreground">Amount</span>
-                                <span className="font-bold text-lg">₹{result.amount}</span>
+                                <span className={`font-bold text-lg ${result.type === 'income' ? 'text-green-600' : 'text-foreground'}`}>
+                                    {result.type === 'income' ? '+' : '-'}₹{result.amount?.toLocaleString()}
+                                </span>
                             </div>
                             <div className="flex justify-between items-center pb-2 border-b">
                                 <span className="text-sm text-muted-foreground">Category</span>

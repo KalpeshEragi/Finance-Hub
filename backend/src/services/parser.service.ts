@@ -1,22 +1,138 @@
 /**
  * @file parser.service.ts
  * @description Service to parse unstructured text (SMS/Email) into structured transaction data.
+ * Enhanced with payment app detection and comprehensive category mapping.
  */
 
 import { CreateTransactionInput } from '../types/transaction.types';
 
-// Simplified category mapping based on ai-engine rules
-const CATEGORY_RULES: Record<string, string[]> = {
-    'Food & Dining': ['swiggy', 'zomato', 'dominos', 'mcdonalds', 'kfc', 'starbucks', 'cafe', 'restaurant', 'burger', 'pizza', 'briyani', 'tea', 'coffee', 'bakery'],
-    'Groceries': ['bigbasket', 'blinkit', 'zepto', 'dmart', 'reliance', 'grofers', 'instamart', 'lulu', 'supermarket', 'mart', 'stores', 'vegetable', 'fruit'],
-    'Transportation': ['uber', 'ola', 'rapido', 'petrol', 'fuel', 'shell', 'hpcl', 'bpcl', 'metro', 'toll', 'rail', 'irctc', 'bus', 'auto'],
-    'Shopping': ['amazon', 'flipkart', 'myntra', 'ajio', 'nykaa', 'zara', 'h&m', 'uniqlo', 'tanishq', 'cloth', 'apparel', 'fashion'],
-    'Entertainment': ['netflix', 'bookmyshow', 'pvr', 'inox', 'spotify', 'hotstar', 'youtube', 'steam', 'playstation', 'game', 'movie'],
-    'Healthcare': ['apollo', 'pharmacy', 'medplus', '1mg', 'practo', 'dr', 'hospital', 'clinic', 'medical', 'lab'],
-    'Utilities': ['bescom', 'bescom', 'airtel', 'jio', 'vi', 'vodafone', 'bsnl', 'electricity', 'water', 'gas', 'bill', 'recharge'],
-    'Travel': ['makemytrip', 'goibibo', 'indigo', 'air india', 'hotel', 'airbnb', 'booking', 'flight'],
-    'Investments': ['zerodha', 'groww', 'upstox', 'sip', 'mutual fund', 'ppf', 'nps', 'stock'],
+// =============================================================================
+// PAYMENT APP DETECTION
+// =============================================================================
+
+/**
+ * Payment app/bank patterns to detect the source of transaction
+ */
+const PAYMENT_APPS: Record<string, string[]> = {
+    'PhonePe': ['phonepe', 'phone pe'],
+    'Google Pay': ['googlepay', 'google pay', 'gpay', 'tez'],
+    'Paytm': ['paytm'],
+    'Amazon Pay': ['amazonpay', 'amazon pay'],
+    'BHIM': ['bhim upi', 'bhim'],
+    'WhatsApp Pay': ['whatsapp pay', 'wa pay'],
+    'CRED': ['cred'],
+    'Freecharge': ['freecharge'],
+    'Mobikwik': ['mobikwik'],
 };
+
+const BANKS: Record<string, string[]> = {
+    'HDFC Bank': ['hdfc', 'hdfcbank'],
+    'ICICI Bank': ['icici', 'icicibank'],
+    'SBI': ['sbi', 'state bank'],
+    'Axis Bank': ['axis', 'axisbank'],
+    'Kotak': ['kotak'],
+    'Yes Bank': ['yesbank', 'yes bank'],
+    'IndusInd': ['indusind'],
+    'PNB': ['pnb', 'punjab national'],
+    'Bank of Baroda': ['bankofbaroda', 'bob'],
+    'Canara Bank': ['canara'],
+    'IDFC First': ['idfc'],
+    'Federal Bank': ['federal bank'],
+    'RBL Bank': ['rbl'],
+};
+
+const CARD_TYPES: Record<string, string[]> = {
+    'Credit Card': ['credit card', 'cc', 'creditcard'],
+    'Debit Card': ['debit card', 'dc', 'debitcard', 'atm card'],
+    'Rupay': ['rupay'],
+    'Visa': ['visa'],
+    'Mastercard': ['mastercard', 'master card'],
+};
+
+// =============================================================================
+// CATEGORY RULES (Expanded with Indian merchants and services)
+// =============================================================================
+
+const CATEGORY_RULES: Record<string, string[]> = {
+    'Food & Dining': [
+        'swiggy', 'zomato', 'dominos', 'mcdonalds', 'kfc', 'starbucks', 'cafe', 'restaurant',
+        'burger', 'pizza', 'biryani', 'tea', 'coffee', 'bakery', 'ccd', 'subway', 'taco bell',
+        'burger king', 'wendy', 'dunkin', 'haldiram', 'barbeque nation', 'chaayos', 'faasos',
+        'behrouz', 'freshly', 'box8', 'licious', 'eat', 'food', 'kitchen', 'dhaba', 'canteen',
+        'mess', 'thali', 'dosa', 'idli', 'paratha', 'curry', 'noodle', 'chinese', 'continental'
+    ],
+    'Groceries': [
+        'bigbasket', 'blinkit', 'zepto', 'dmart', 'reliance', 'grofers', 'instamart', 'lulu',
+        'supermarket', 'mart', 'stores', 'vegetable', 'fruit', 'jiomart', 'more megastore',
+        'spencer', 'nature basket', 'fresho', 'amazon fresh', 'kirana', 'ratnadeep', 'star bazaar'
+    ],
+    'Transportation': [
+        'uber', 'ola', 'rapido', 'petrol', 'fuel', 'shell', 'hpcl', 'bpcl', 'iocl', 'metro',
+        'toll', 'rail', 'irctc', 'bus', 'auto', 'rickshaw', 'cab', 'taxi', 'bike taxi',
+        'namma yatri', 'meru', 'fastag', 'parking'
+    ],
+    'Shopping': [
+        'amazon', 'flipkart', 'myntra', 'ajio', 'nykaa', 'zara', 'h&m', 'uniqlo', 'tanishq',
+        'cloth', 'apparel', 'fashion', 'meesho', 'snapdeal', 'tatacliq', 'shoppers stop',
+        'lifestyle', 'pantaloons', 'westside', 'max fashion', 'trends', 'central', 'fbb',
+        'reliance digital', 'croma', 'vijay sales', 'lenskart', 'pepperfry', 'urban ladder',
+        'ikea', 'decathlon', 'sports', 'shoe', 'footwear', 'bata', 'nike', 'adidas', 'puma'
+    ],
+    'Entertainment': [
+        'netflix', 'bookmyshow', 'pvr', 'inox', 'spotify', 'hotstar', 'youtube', 'steam',
+        'playstation', 'game', 'movie', 'disney', 'prime video', 'zee5', 'sonyliv', 'voot',
+        'aha', 'mubi', 'jio cinema', 'gaana', 'wynk', 'apple music', 'gaming', 'xbox',
+        'paytm insider', 'event', 'concert', 'theatre', 'cinema', 'multiplex'
+    ],
+    'Health & Medicine': [
+        'apollo', 'pharmacy', 'medplus', '1mg', 'practo', 'dr', 'hospital', 'clinic', 'medical',
+        'lab', 'netmeds', 'pharmeasy', 'tata 1mg', 'thyrocare', 'diagnostic', 'health', 'fitness',
+        'gym', 'cult', 'cure.fit', 'healthkart', 'doctor', 'dentist', 'eye', 'optical', 'lens',
+        'medicine', 'tablet', 'capsule', 'injection', 'vaccine', 'test', 'scan', 'xray', 'mri'
+    ],
+    'Bills & Utilities': [
+        'bescom', 'electricity', 'water', 'gas', 'bill', 'recharge', 'airtel', 'jio', 'vi',
+        'vodafone', 'bsnl', 'tata play', 'dth', 'broadband', 'wifi', 'internet', 'postpaid',
+        'prepaid', 'mobile', 'landline', 'piped gas', 'lpg', 'cylinder', 'mahanagar gas',
+        'adani gas', 'torrent power', 'tata power'
+    ],
+    'Travel': [
+        'makemytrip', 'goibibo', 'indigo', 'air india', 'hotel', 'airbnb', 'booking', 'flight',
+        'vistara', 'spicejet', 'akasa', 'oyo', 'trivago', 'cleartrip', 'yatra', 'ixigo',
+        'easemytrip', 'redbus', 'abhibus', 'train', 'railway', 'luggage', 'airport', 'cab'
+    ],
+    'Investments': [
+        'zerodha', 'groww', 'upstox', 'sip', 'mutual fund', 'ppf', 'nps', 'stock', 'angel one',
+        'kotak securities', 'hdfc securities', 'icici direct', 'paytm money', 'et money',
+        'kuvera', 'coin', 'smallcase', 'fd', 'rd', 'bond', 'demat'
+    ],
+    'Education': [
+        'udemy', 'coursera', 'unacademy', 'byju', 'vedantu', 'upgrad', 'simplilearn', 'school',
+        'college', 'tuition', 'coaching', 'book', 'stationery', 'exam', 'fee', 'library'
+    ],
+    'Insurance': [
+        'insurance', 'lic', 'icici lombard', 'hdfc ergo', 'bajaj allianz', 'policybazaar',
+        'acko', 'digit', 'tata aia', 'max life', 'policy', 'premium', 'claim'
+    ],
+    'Personal Care': [
+        'salon', 'spa', 'haircut', 'parlour', 'beauty', 'grooming', 'urban company',
+        'housejoy', 'looks', 'lakme', 'naturals', 'jawed habib', 'bodycraft'
+    ],
+    'Rent & Housing': [
+        'rent', 'housing', 'maintenance', 'society', 'apartment', 'flat', 'landlord',
+        'pgyno', 'nestaway', 'nobroker'
+    ],
+    'Subscriptions': [
+        'subscription', 'membership', 'annual', 'monthly', 'premium', 'pro', 'plus'
+    ],
+    'Transfer': [
+        'transfer', 'imps', 'neft', 'rtgs', 'sent to', 'paid to', 'received from'
+    ]
+};
+
+// =============================================================================
+// INTERFACES
+// =============================================================================
 
 interface ParsedResult {
     amount: number;
@@ -24,18 +140,30 @@ interface ParsedResult {
     date: Date;
     type: 'debit' | 'credit';
     description: string;
+    paymentApp?: string;
+    bank?: string;
+    cardType?: string;
 }
+
+// =============================================================================
+// PARSER SERVICE
+// =============================================================================
 
 export class ParserService {
 
     /**
      * Main entry point to parse text
      */
-    static parse(text: string): Partial<CreateTransactionInput> | null {
+    static parse(text: string): Partial<CreateTransactionInput> & { paymentApp?: string; bank?: string; cardType?: string } | null {
         try {
             // Normalize text: remove excessive whitespace, keep mostly raw
             const cleanText = text.replace(/\n/g, ' ').trim();
             const normalizedText = cleanText.toLowerCase();
+
+            // Detect payment source first
+            const paymentApp = this.detectPaymentApp(normalizedText);
+            const bank = this.detectBank(normalizedText);
+            const cardType = this.detectCardType(normalizedText);
 
             // Try different regex strategies in order of specificity
             const result =
@@ -45,8 +173,14 @@ export class ParserService {
 
             if (!result) return null;
 
-            // Auto-categorize
+            // Auto-categorize based on merchant
             const category = this.categorizeMerchant(result.merchant);
+
+            // Build description with payment source
+            let description = result.description;
+            if (paymentApp) description = `${paymentApp}: ${description}`;
+            else if (bank && cardType) description = `${bank} ${cardType}: ${description}`;
+            else if (bank) description = `${bank}: ${description}`;
 
             return {
                 amount: result.amount,
@@ -54,7 +188,10 @@ export class ParserService {
                 category: category,
                 merchant: result.merchant,
                 date: result.date.toISOString().split('T')[0], // YYYY-MM-DD
-                description: result.description || `Transaction at ${result.merchant}`,
+                description: description || `Transaction at ${result.merchant}`,
+                paymentApp,
+                bank,
+                cardType,
             };
         } catch (e) {
             console.error("Parser Error:", e);
@@ -62,18 +199,76 @@ export class ParserService {
         }
     }
 
+    // =========================================================================
+    // DETECTION METHODS
+    // =========================================================================
+
+    private static detectPaymentApp(text: string): string | undefined {
+        for (const [app, keywords] of Object.entries(PAYMENT_APPS)) {
+            if (keywords.some(k => text.includes(k))) {
+                return app;
+            }
+        }
+        return undefined;
+    }
+
+    private static detectBank(text: string): string | undefined {
+        for (const [bank, keywords] of Object.entries(BANKS)) {
+            if (keywords.some(k => text.includes(k))) {
+                return bank;
+            }
+        }
+        return undefined;
+    }
+
+    private static detectCardType(text: string): string | undefined {
+        for (const [card, keywords] of Object.entries(CARD_TYPES)) {
+            if (keywords.some(k => text.includes(k))) {
+                return card;
+            }
+        }
+        return undefined;
+    }
+
+    // =========================================================================
+    // PARSING STRATEGIES
+    // =========================================================================
+
     /**
      * Strategy 1: Specific Bank SMS Formats (High Confidence)
      */
     private static parseSpecificBankFormats(original: string, text: string): ParsedResult | null {
-        // HDFC/Axis/SBI/ICICI Generic "Debited" Pattern
-        // "Rs 1234 debited from a/c ... to MERCHANT on DD-MM-YY..."
-        const debitRegex = /(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{2})?)\s*(?:is|has been)?\s*debited\s*(?:from)?.*?\s*(?:to|at)\s+(.*?)\s+(?:on|via|ref)/i;
+        let match: RegExpMatchArray | null;
 
-        // "Credited" Pattern
-        const creditRegex = /(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{2})?)\s*(?:is|has been)?\s*credited\s*(?:to)?.*?\s*(?:from|by)\s+(.*?)\s+(?:on|via|ref)/i; // Fixed: Credited is usually FROM someone or BY a transfer
+        // Pattern 1: "Rs.450 paid to Swiggy using PhonePe" (Currency FIRST)
+        const currencyFirstPaidRegex = /(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{2})?)\s*(?:paid|sent|debited)\s*(?:to|for)\s+(.*?)(?:\s+using|\s+via|\s+on|\.|\s*$)/i;
+        match = text.match(currencyFirstPaidRegex);
+        if (match && match[1] && match[2]) {
+            return {
+                amount: this.parseAmount(match[1]),
+                merchant: this.cleanMerchantName(match[2]),
+                date: this.extractDate(original) || new Date(),
+                type: 'debit',
+                description: 'Payment'
+            };
+        }
 
-        let match = text.match(debitRegex);
+        // Pattern 2: "Paid Rs 899 to Amazon" (Verb FIRST)
+        const verbFirstPaidRegex = /(?:paid|sent)\s*(?:rs\.?|inr|₹)?\s*([\d,]+(?:\.\d{2})?)\s*(?:to|for)\s+(.*?)(?:\s+using|\s+via|\s+on|\.|\s*$)/i;
+        match = text.match(verbFirstPaidRegex);
+        if (match && match[1] && match[2]) {
+            return {
+                amount: this.parseAmount(match[1]),
+                merchant: this.cleanMerchantName(match[2]),
+                date: this.extractDate(original) || new Date(),
+                type: 'debit',
+                description: 'Payment'
+            };
+        }
+
+        // Pattern 3: Bank Debit - "Rs 2,500.00 debited from HDFC Bank ... to FLIPKART on ..."
+        const bankDebitRegex = /(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{2})?)\s*(?:is|has been)?\s*debited\s*(?:from)?.*?\s*(?:to|at|for)\s+(.*?)\s+(?:on|via|ref)/i;
+        match = text.match(bankDebitRegex);
         if (match && match[1] && match[2]) {
             return {
                 amount: this.parseAmount(match[1]),
@@ -84,7 +279,9 @@ export class ParserService {
             };
         }
 
-        match = text.match(creditRegex);
+        // Pattern 4: Bank Credit - "Rs X credited to account from Y"
+        const bankCreditRegex = /(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{2})?)\s*(?:is|has been)?\s*credited\s*(?:to)?.*?\s*(?:from|by)\s+(.*?)\s+(?:on|via|ref)/i;
+        match = text.match(bankCreditRegex);
         if (match && match[1] && match[2]) {
             return {
                 amount: this.parseAmount(match[1]),
@@ -95,9 +292,8 @@ export class ParserService {
             };
         }
 
-        // SBI "Spent" Pattern
-        // "Rs 529.00 spent on card ... at AMAZON ..."
-        const spentRegex = /(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{2})?)\s*spent\s*(?:on card)?.*?\s*at\s+(.*?)\s+(?:on)/i;
+        // Pattern 5: Card Spend - "Rs 1,299.00 spent ... at MYNTRA"
+        const spentRegex = /(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{2})?)\s*spent\s*.*?\s*at\s+(.*?)(?:\s+on|\s+ref|\.|$)/i;
         match = text.match(spentRegex);
         if (match && match[1] && match[2]) {
             return {
@@ -106,6 +302,32 @@ export class ParserService {
                 date: this.extractDate(original) || new Date(),
                 type: 'debit',
                 description: 'Card Spend'
+            };
+        }
+
+        // Pattern 6: Received Money - "Received Rs 5,000 from RAHUL"
+        const receivedRegex = /received\s*(?:rs\.?|inr|₹)?\s*([\d,]+(?:\.\d{2})?)\s*from\s+(.*?)(?:\s+via|\s+on|\.|$)/i;
+        match = text.match(receivedRegex);
+        if (match && match[1] && match[2]) {
+            return {
+                amount: this.parseAmount(match[1]),
+                merchant: this.cleanMerchantName(match[2]),
+                date: this.extractDate(original) || new Date(),
+                type: 'credit',
+                description: 'Money Received'
+            };
+        }
+
+        // Pattern 7: Bank account format - "Rs X debited from a/c for Y on date"
+        const simpleBankRegex = /(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{2})?)\s*debited\s*(?:from)?.*?(?:for|to|at)\s+(.*?)(?:\s+on|\s+ref|\.|\s*$)/i;
+        match = text.match(simpleBankRegex);
+        if (match && match[1] && match[2]) {
+            return {
+                amount: this.parseAmount(match[1]),
+                merchant: this.cleanMerchantName(match[2]),
+                date: this.extractDate(original) || new Date(),
+                type: 'debit',
+                description: 'Bank Debit'
             };
         }
 
@@ -128,7 +350,7 @@ export class ParserService {
                 merchant: this.cleanMerchantName(match[2]),
                 date: this.extractDate(original) || new Date(),
                 type: 'debit',
-                description: 'UPI/Payment'
+                description: 'UPI Payment'
             };
         }
 
@@ -139,7 +361,7 @@ export class ParserService {
                 merchant: this.cleanMerchantName(match[2]),
                 date: this.extractDate(original) || new Date(),
                 type: 'credit',
-                description: 'Payment Received'
+                description: 'UPI Received'
             };
         }
 
@@ -151,7 +373,6 @@ export class ParserService {
      */
     private static parseNaturalLanguage(original: string, text: string): ParsedResult | null {
         // Look for "Amount at Merchant" or "Merchant Amount"
-        // Regex: (Currency Amount) ... (at/to/for) ... (Merchant)
         // e.g. "Rs 500 at Starbucks", "500 for Uber"
 
         // 1. "Currency Amount words Merchant"
@@ -169,11 +390,9 @@ export class ParserService {
 
         // 2. "Merchant words Currency Amount"
         // e.g. "Swiggy order 250", "Uber ride rs 300"
-        // This is risky, so we look for specific keywords or currency markers
         const regex2 = /(.*?)\s+(?:order|bill|payment|ride|txn)?\s*(?:rs\.?|inr|₹)\s*([\d,]+)/i;
         match = text.match(regex2);
         if (match && match[1] && match[2]) {
-            // Avoid parsing "Balance is Rs 500" as merchant="Balance is"
             const merchantCandidates = match[1].trim();
             if (merchantCandidates.length < 30 && !merchantCandidates.includes('balance')) {
                 return {
@@ -189,7 +408,9 @@ export class ParserService {
         return null;
     }
 
-    // --- Helpers ---
+    // =========================================================================
+    // HELPERS
+    // =========================================================================
 
     private static parseAmount(amountStr: string): number {
         return parseFloat(amountStr.replace(/,/g, ''));
@@ -197,9 +418,10 @@ export class ParserService {
 
     private static cleanMerchantName(raw: string): string {
         let name = raw
-            .replace(/(?:via|on|ref|txn|upi|transfer|imps|neft).*/i, '') // Cut off technical details
-            .replace(/[\*#]/g, '')
+            .replace(/(?:via|on|ref|txn|upi|transfer|imps|neft|using|through).*/i, '') // Cut off technical details
+            .replace(/[\*#@]/g, '')
             .replace(/[0-9]{4,}/g, '') // Remove long numbers (account/ref ids)
+            .replace(/upi/gi, '')
             .trim();
 
         // Improve capitalization (Capitalize First Letter of each word)

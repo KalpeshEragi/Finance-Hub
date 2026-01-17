@@ -130,8 +130,9 @@ export class RecommendationService {
 
         results.sort((a, b) => b.score - a.score);
 
-        if (results.length > 0) {
-            results[0].isRecommended = true;
+        const bestRecommendation = results[0];
+        if (bestRecommendation) {
+            bestRecommendation.isRecommended = true;
         }
 
         return results;
