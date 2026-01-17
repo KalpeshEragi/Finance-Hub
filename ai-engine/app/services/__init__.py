@@ -11,6 +11,7 @@ This package contains all business logic services:
 - Goal planning
 - Alert generation
 - Digital Twin simulation
+- Bank statement parsing
 """
 
 from app.services.categorization_service import (
@@ -33,6 +34,11 @@ from app.services.goal_service import (
 from app.services.alert_service import (
     check_alerts,
 )
+from app.services.statement_parser_service import (
+    parse_statement,
+    parse_csv_statement,
+    parse_pdf_statement,
+)
 
 __all__ = [
     "categorize_transaction",
@@ -43,4 +49,7 @@ __all__ = [
     "get_tax_suggestions",
     "plan_goals",
     "check_alerts",
+    "parse_statement",
+    "parse_csv_statement",
+    "parse_pdf_statement",
 ]

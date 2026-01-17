@@ -1,231 +1,132 @@
 "use client"
 
-import type React from "react"
-
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
+import { Input } from "@/components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Receipt,
   FileText,
   AlertCircle,
-  HelpCircle,
-  Briefcase,
-  Home,
-  Building2,
-  TrendingUp,
-  Users,
-  Landmark,
-  Scale,
-  FileCheck,
   IndianRupee,
   Sparkles,
+  TrendingUp,
+  ShieldCheck,
+  ArrowRight,
+  Loader2,
+  CheckCircle2,
+  Plus,
+  Info
 } from "lucide-react"
 import { cn } from "@/lib/utils"
-
-interface ITRForm {
-  id: string
-  name: string
-  shortName: string
-  description: string
-  icon: React.ElementType
-  color: string
-}
-
-const itrForms: ITRForm[] = [
-  {
-    id: "itr1",
-    name: "ITR-1 (Sahaj)",
-    shortName: "ITR-1",
-    description: "Salaried individuals with income up to ₹50 lakh",
-    icon: Briefcase,
-    color: "emerald",
-  },
-  {
-    id: "itr2",
-    name: "ITR-2",
-    shortName: "ITR-2",
-    description: "Individuals/HUFs with capital gains, foreign income",
-    icon: Home,
-    color: "blue",
-  },
-  {
-    id: "itr3",
-    name: "ITR-3",
-    shortName: "ITR-3",
-    description: "Individuals/HUFs with business or profession income",
-    icon: Building2,
-    color: "purple",
-  },
-  {
-    id: "itr4",
-    name: "ITR-4 (Sugam)",
-    shortName: "ITR-4",
-    description: "Presumptive income under Section 44AD/44ADA/44AE",
-    icon: TrendingUp,
-    color: "amber",
-  },
-  {
-    id: "itr5",
-    name: "ITR-5",
-    shortName: "ITR-5",
-    description: "For Firms, LLPs, AOPs, BOIs, Cooperative Societies",
-    icon: Users,
-    color: "cyan",
-  },
-  {
-    id: "itr6",
-    name: "ITR-6",
-    shortName: "ITR-6",
-    description: "For Companies not claiming exemption u/s 11",
-    icon: Landmark,
-    color: "rose",
-  },
-  {
-    id: "itr7",
-    name: "ITR-7",
-    shortName: "ITR-7",
-    description: "Trusts, political parties, institutions u/s 139(4A-4F)",
-    icon: Scale,
-    color: "indigo",
-  },
-  {
-    id: "itr7b",
-    name: "ITR-7B",
-    shortName: "ITR-7B",
-    description: "For entities with modified return requirements",
-    icon: FileCheck,
-    color: "pink",
-  },
-]
-
-interface SalaryRange {
-  id: string
-  range: string
-  description: string
-  taxNote?: string
-}
-
-const salaryRanges: SalaryRange[] = [
-  {
-    id: "range1",
-    range: "Up to ₹2.5 lakh",
-    description: "Basic exemption limit",
-    taxNote: "No tax liability under both regimes",
-  },
-  {
-    id: "range2",
-    range: "₹2.5 lakh – ₹5 lakh",
-    description: "5% tax slab",
-    taxNote: "Tax rebate u/s 87A available (New Regime: up to ₹7 lakh)",
-  },
-  {
-    id: "range3",
-    range: "₹5 lakh – ₹7.5 lakh",
-    description: "10-20% tax slab",
-    taxNote: "Consider deductions to reduce taxable income",
-  },
-  {
-    id: "range4",
-    range: "₹7.5 lakh – ₹10 lakh",
-    description: "15-20% tax slab",
-    taxNote: "Compare old vs new regime carefully",
-  },
-  {
-    id: "range5",
-    range: "₹10 lakh – ₹15 lakh",
-    description: "20-30% tax slab",
-    taxNote: "Maximize 80C, 80D, HRA deductions",
-  },
-  {
-    id: "range6",
-    range: "₹15 lakh – ₹25 lakh",
-    description: "25-30% tax slab",
-    taxNote: "High earners - plan investments strategically",
-  },
-  {
-    id: "range7",
-    range: "Above ₹25 lakh",
-    description: "30% tax slab + surcharge",
-    taxNote: "Surcharge applicable above ₹50 lakh",
-  },
-]
-
-const colorClasses: Record<string, { bg: string; border: string; text: string; selected: string }> = {
-  emerald: {
-    bg: "bg-emerald-500/10",
-    border: "border-emerald-500/30",
-    text: "text-emerald-400",
-    selected: "border-emerald-500 bg-emerald-500/20",
-  },
-  blue: {
-    bg: "bg-blue-500/10",
-    border: "border-blue-500/30",
-    text: "text-blue-400",
-    selected: "border-blue-500 bg-blue-500/20",
-  },
-  purple: {
-    bg: "bg-purple-500/10",
-    border: "border-purple-500/30",
-    text: "text-purple-400",
-    selected: "border-purple-500 bg-purple-500/20",
-  },
-  amber: {
-    bg: "bg-amber-500/10",
-    border: "border-amber-500/30",
-    text: "text-amber-400",
-    selected: "border-amber-500 bg-amber-500/20",
-  },
-  cyan: {
-    bg: "bg-cyan-500/10",
-    border: "border-cyan-500/30",
-    text: "text-cyan-400",
-    selected: "border-cyan-500 bg-cyan-500/20",
-  },
-  rose: {
-    bg: "bg-rose-500/10",
-    border: "border-rose-500/30",
-    text: "text-rose-400",
-    selected: "border-rose-500 bg-rose-500/20",
-  },
-  indigo: {
-    bg: "bg-indigo-500/10",
-    border: "border-indigo-500/30",
-    text: "text-indigo-400",
-    selected: "border-indigo-500 bg-indigo-500/20",
-  },
-  pink: {
-    bg: "bg-pink-500/10",
-    border: "border-pink-500/30",
-    text: "text-pink-400",
-    selected: "border-pink-500 bg-pink-500/20",
-  },
-}
+import {
+  getTaxEstimate,
+  getTaxDeductions,
+  updateTaxIncome,
+  updateTaxDeductions,
+  type TaxComparison,
+  type DeductionDetails,
+  type IncomeInput
+} from "@/lib/api/tax"
+import { useToast } from "@/components/ui/use-toast"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select"
+import { ITRFormSuggester } from "@/components/tax/itr-form-suggester"
+import { TaxDeadlines } from "@/components/tax/tax-deadlines"
 
 export default function TaxPage() {
-  const [selectedITR, setSelectedITR] = useState<string | null>(null)
-  const [selectedSalaryRange, setSelectedSalaryRange] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState("overview")
+  const [comparison, setComparison] = useState<TaxComparison | null>(null)
+  const [deductionsData, setDeductionsData] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [isUpdating, setIsUpdating] = useState(false)
+  const { toast } = useToast()
 
-  const handleSelectITR = (itrId: string) => {
-    setSelectedITR(selectedITR === itrId ? null : itrId)
+  // Income form state
+  const [incomeType, setIncomeType] = useState<IncomeInput['type']>('salary')
+  const [incomeAmount, setIncomeAmount] = useState('')
+  const [incomePeriod, setIncomePeriod] = useState<IncomeInput['period']>('annually')
+
+  const fetchData = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const [estRes, dedRes] = await Promise.all([
+        getTaxEstimate(),
+        getTaxDeductions()
+      ])
+      setComparison(estRes?.data ?? null)
+      setDeductionsData(dedRes?.data ?? null)
+    } catch (error) {
+      setComparison(null)
+      setDeductionsData(null)
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load tax data",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [toast])
+
+  useEffect(() => {
+    fetchData()
+  }, [fetchData])
+
+  const handleUpdateIncome = async () => {
+    if (!incomeAmount) return
+    setIsUpdating(true)
+    try {
+      await updateTaxIncome({
+        type: incomeType,
+        amount: parseFloat(incomeAmount),
+        period: incomePeriod
+      })
+      toast({ title: "Success", description: "Income updated successfully" })
+      fetchData()
+      setIncomeAmount('')
+    } catch (error) {
+      toast({ variant: "destructive", title: "Error", description: "Failed to update income" })
+    } finally {
+      setIsUpdating(false)
+    }
   }
 
-  const handleSelectSalaryRange = (rangeId: string) => {
-    setSelectedSalaryRange(selectedSalaryRange === rangeId ? null : rangeId)
+  if (isLoading && !comparison) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh]">
+        <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+        <p className="text-muted-foreground">Calculating your tax estimates...</p>
+      </div>
+    )
   }
 
-  const canGenerateReport = selectedITR && selectedSalaryRange
+  if (!comparison) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh]">
+        <AlertCircle className="w-10 h-10 text-destructive mb-4" />
+        <p className="text-muted-foreground">Unable to load tax data. Please try again later.</p>
+        <Button onClick={fetchData} variant="outline" className="mt-4">
+          Retry
+        </Button>
+      </div>
+    )
+  }
 
-  const selectedFormData = itrForms.find((f) => f.id === selectedITR)
-  const selectedRangeData = salaryRanges.find((r) => r.id === selectedSalaryRange)
+  const recommended = comparison.recommended === 'old' ? comparison.oldRegime : comparison.newRegime
 
   return (
-    <>
+    <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <div className="p-3 rounded-xl bg-primary/10">
             <Receipt className="w-8 h-8 text-primary" />
@@ -233,7 +134,7 @@ export default function TaxPage() {
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Tax Center</h1>
             <p className="text-sm text-muted-foreground">
-              Select your ITR form and income range to generate your report
+              Comprehensive tax planning and regime optimization
             </p>
           </div>
         </div>
@@ -243,235 +144,339 @@ export default function TaxPage() {
         </Badge>
       </div>
 
-      {/* Help Banner */}
-      <Card className="bg-gradient-to-r from-primary/10 to-blue-500/10 border-primary/20 mb-6">
-        <CardContent className="p-4">
-          <div className="flex items-start gap-3">
-            <div className="p-2 rounded-lg bg-primary/20">
-              <HelpCircle className="w-5 h-5 text-primary" />
-            </div>
-            <div className="flex-1">
-              <h3 className="font-medium text-foreground mb-1">How to generate your ITR report?</h3>
-              <p className="text-sm text-muted-foreground">
-                1. Select your applicable ITR form below. 2. Choose your annual salary range. 3. Click "Generate ITR
-                Report" to get your personalized tax filing guidance.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="bg-secondary/50 border border-border p-1 h-12">
+          <TabsTrigger value="overview" className="h-10 px-6 data-[state=active]:bg-background">Overview</TabsTrigger>
+          <TabsTrigger value="income" className="h-10 px-6 data-[state=active]:bg-background">Income & Deductions</TabsTrigger>
+          <TabsTrigger value="comparison" className="h-10 px-6 data-[state=active]:bg-background">Regime Comparison</TabsTrigger>
+        </TabsList>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column - ITR Form Selection */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* ITR Form Selection */}
-          <Card className="bg-card border-border">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg text-foreground flex items-center gap-2">
-                <FileText className="w-5 h-5 text-primary" />
-                Step 1: Select Your ITR Form
-              </CardTitle>
-              <CardDescription>Choose the ITR form applicable to your income sources</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {itrForms.map((form) => {
-                  const colors = colorClasses[form.color]
-                  const IconComponent = form.icon
-                  const isSelected = selectedITR === form.id
-
-                  return (
-                    <div
-                      key={form.id}
-                      className={cn(
-                        "relative flex items-start gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200",
-                        isSelected ? colors.selected : "bg-secondary/30 border-border hover:border-muted-foreground/30",
-                      )}
-                      onClick={() => handleSelectITR(form.id)}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => handleSelectITR(form.id)}
-                        className={cn("mt-0.5 border-2", isSelected ? colors.border : "border-muted-foreground/50")}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <div className={cn("p-1.5 rounded-lg", colors.bg)}>
-                            <IconComponent className={cn("w-4 h-4", colors.text)} />
-                          </div>
-                          <span className="font-semibold text-foreground">{form.shortName}</span>
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Main Recommendation Card */}
+              <Card className="bg-gradient-to-br from-primary/10 to-blue-600/10 border-primary/20">
+                <CardContent className="p-8">
+                  <div className="flex flex-col md:flex-row gap-8 items-center">
+                    <div className="flex-1 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-5 h-5 text-amber-400" />
+                        <span className="text-sm font-medium uppercase tracking-wider text-primary">AI Recommendation</span>
+                      </div>
+                      <h2 className="text-3xl font-bold text-foreground">
+                        Switch to the <span className="text-primary capitalize">{comparison?.recommended} Regime</span>
+                      </h2>
+                      <p className="text-muted-foreground leading-relaxed">
+                        {comparison?.explanation}
+                      </p>
+                      <div className="flex items-center gap-6 pt-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase mb-1">Estimated Tax</p>
+                          <p className="text-2xl font-bold text-foreground">₹{(recommended?.totalTax ?? 0).toLocaleString()}</p>
                         </div>
-                        <p className="text-xs text-muted-foreground leading-relaxed">{form.description}</p>
+                        <div className="w-px h-10 bg-border" />
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase mb-1">Potential Savings</p>
+                          <p className="text-2xl font-bold text-emerald-400">₹{(comparison?.savings ?? 0).toLocaleString()}</p>
+                        </div>
                       </div>
                     </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Salary Range Selection */}
-          <Card className="bg-card border-border">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg text-foreground flex items-center gap-2">
-                <IndianRupee className="w-5 h-5 text-emerald-400" />
-                Step 2: Select Your Annual Salary Range
-              </CardTitle>
-              <CardDescription>Choose the income bracket that matches your gross annual salary</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-2">
-                {salaryRanges.map((range) => {
-                  const isSelected = selectedSalaryRange === range.id
-
-                  return (
-                    <div
-                      key={range.id}
-                      className={cn(
-                        "flex items-start gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all duration-200",
-                        isSelected
-                          ? "border-emerald-500 bg-emerald-500/10"
-                          : "bg-secondary/30 border-border hover:border-muted-foreground/30",
-                      )}
-                      onClick={() => handleSelectSalaryRange(range.id)}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => handleSelectSalaryRange(range.id)}
-                        className={cn(
-                          "mt-0.5 border-2",
-                          isSelected ? "border-emerald-500" : "border-muted-foreground/50",
-                        )}
-                      />
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-semibold text-foreground">{range.range}</span>
-                          <Badge
-                            variant="outline"
-                            className={cn(
-                              "text-xs",
-                              isSelected
-                                ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-400"
-                                : "border-border bg-secondary/50 text-muted-foreground",
-                            )}
-                          >
-                            {range.description}
-                          </Badge>
-                        </div>
-                        {range.taxNote && <p className="text-xs text-muted-foreground">{range.taxNote}</p>}
-                      </div>
+                    <div className="w-48 h-48 rounded-full border-8 border-primary/20 flex flex-col items-center justify-center bg-background/50 relative">
+                      <div className="absolute inset-0 rounded-full border-[12px] border-primary border-t-transparent animate-[spin_3s_linear_infinite]" />
+                      <span className="text-xs text-muted-foreground">Effective Rate</span>
+                      <span className="text-2xl font-bold">{recommended?.effectiveTaxRate}%</span>
+                      <Badge variant="outline" className="mt-2 bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Optimal</Badge>
                     </div>
-                  )
-                })}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-        {/* Right Column - Summary & Generate Button */}
-        <div className="space-y-6">
-          {/* Selection Summary */}
-          <Card className="bg-card border-border sticky top-6">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-lg text-foreground flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-400" />
-                Your Selection
-              </CardTitle>
-              <CardDescription>Review your choices before generating the report</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Selected ITR Form */}
-              <div className="p-4 rounded-xl bg-secondary/50 border border-border">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wider">ITR Form</Label>
-                {selectedFormData ? (
-                  <div className="flex items-center gap-2 mt-2">
-                    <div className={cn("p-2 rounded-lg", colorClasses[selectedFormData.color].bg)}>
-                      <selectedFormData.icon className={cn("w-4 h-4", colorClasses[selectedFormData.color].text)} />
+              {/* Suggestions Header */}
+              <div className="flex items-center gap-2 mt-8 mb-4">
+                <h3 className="text-lg font-semibold">Optimization Tips</h3>
+                <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none">
+                  {(deductionsData?.suggestions.length ?? 0)} New Tips
+                </Badge>
+              </div>
+
+              {/* Suggestions Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {(deductionsData?.suggestions ?? []).map((suggestion: any, idx: number) => (
+                  <Card key={idx} className="bg-card border-border overflow-hidden group hover:border-primary/50 transition-colors">
+                    <div className={cn(
+                      "h-1",
+                      suggestion.priority === 'high' ? "bg-red-400" : suggestion.priority === 'medium' ? "bg-amber-400" : "bg-blue-400"
+                    )} />
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between mb-3">
+                        <Badge variant="outline" className="border-border font-normal text-xs">{suggestion.section}</Badge>
+                        <span className="text-xs text-emerald-400 font-medium">Save ~₹{(suggestion.potentialSavings ?? 0).toLocaleString()}</span>
+                      </div>
+                      <h4 className="font-semibold text-foreground mb-1">{suggestion.title}</h4>
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-4">{suggestion.description}</p>
+                      <Button variant="ghost" size="sm" className="w-full text-primary hover:text-primary hover:bg-primary/10 p-0 text-xs">
+                        Learn How <ArrowRight className="w-3 h-3 ml-1" />
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Sidebar */}
+            <div className="space-y-6">
+              <ITRFormSuggester income={comparison.oldRegime.grossIncome && deductionsData?.claimed ? {
+                salary: comparison.oldRegime.grossIncome, // Simplified mapping
+                rental: 0,
+                business: 0,
+                capitalGains: { shortTerm: 0, longTerm: 0 },
+                otherSources: 0
+              } : {
+                salary: 0,
+                rental: 0,
+                business: 0,
+                capitalGains: { shortTerm: 0, longTerm: 0 },
+                otherSources: 0
+              }} />
+
+              <TaxDeadlines />
+
+              {/* Quick Stats */}
+              <div className="space-y-4">
+                <Card className="bg-card border-border">
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                      <IndianRupee className="w-5 h-5" />
                     </div>
                     <div>
-                      <p className="font-semibold text-foreground">{selectedFormData.name}</p>
-                      <p className="text-xs text-muted-foreground">{selectedFormData.description}</p>
+                      <p className="text-xs text-muted-foreground">Gross Total Income</p>
+                      <p className="text-lg font-bold">₹{(recommended?.grossIncome ?? 0).toLocaleString()}</p>
                     </div>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground mt-2">No form selected</p>
-                )}
+                  </CardContent>
+                </Card>
+                <Card className="bg-card border-border">
+                  <CardContent className="p-4 flex items-center gap-4">
+                    <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                      <ShieldCheck className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Total Deductions</p>
+                      <p className="text-lg font-bold">₹{(recommended?.totalDeductions ?? 0).toLocaleString()}</p>
+                    </div>
+                  </CardContent>
+                </Card>
+                <Button className="w-full h-12 gap-2" variant="outline" onClick={() => setActiveTab("income")}>
+                  Optimize Deductions <ArrowRight className="w-4 h-4" />
+                </Button>
               </div>
+            </div>
+          </div>
+        </TabsContent>
 
-              {/* Selected Salary Range */}
-              <div className="p-4 rounded-xl bg-secondary/50 border border-border">
-                <Label className="text-xs text-muted-foreground uppercase tracking-wider">Annual Salary</Label>
-                {selectedRangeData ? (
-                  <div className="mt-2">
-                    <p className="font-semibold text-foreground">{selectedRangeData.range}</p>
-                    <p className="text-xs text-muted-foreground">{selectedRangeData.taxNote}</p>
+        {/* Income & Deductions Tab */}
+        <TabsContent value="income" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Add Income Form */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-lg">Update Income</CardTitle>
+                <CardDescription>Enter details of your various income sources</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Source</Label>
+                    <Select value={incomeType} onValueChange={(v: any) => setIncomeType(v)}>
+                      <SelectTrigger className="bg-secondary border-border">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="salary">Salary</SelectItem>
+                        <SelectItem value="rental">Rental Income</SelectItem>
+                        <SelectItem value="business">Business Income</SelectItem>
+                        <SelectItem value="other">Other Sources</SelectItem>
+                        <SelectItem value="capital_gains_short">Short Term Cap. Gains</SelectItem>
+                        <SelectItem value="capital_gains_long">Long Term Cap. Gains</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground mt-2">No range selected</p>
-                )}
-              </div>
+                  <div className="space-y-2">
+                    <Label>Period</Label>
+                    <Select value={incomePeriod} onValueChange={(v: any) => setIncomePeriod(v)}>
+                      <SelectTrigger className="bg-secondary border-border">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="annually">Annual Amount</SelectItem>
+                        <SelectItem value="monthly">Monthly Amount</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Amount (₹)</Label>
+                  <Input
+                    type="number"
+                    placeholder="Enter amount"
+                    value={incomeAmount}
+                    onChange={(e) => setIncomeAmount(e.target.value)}
+                    className="bg-secondary border-border text-lg"
+                  />
+                </div>
+                <Button
+                  className="w-full"
+                  onClick={handleUpdateIncome}
+                  disabled={isUpdating || !incomeAmount}
+                >
+                  {isUpdating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                  Update Income Source
+                </Button>
+              </CardContent>
+            </Card>
 
-              {/* Generate Report Button */}
-              <Button
-                className={cn(
-                  "w-full h-14 text-base font-semibold transition-all duration-300",
-                  canGenerateReport
-                    ? "bg-gradient-to-r from-primary to-blue-600 hover:from-primary/90 hover:to-blue-600/90 shadow-lg shadow-primary/25"
-                    : "bg-muted text-muted-foreground cursor-not-allowed",
-                )}
-                disabled={!canGenerateReport}
-              >
-                <FileText className="w-5 h-5 mr-2" />
-                Generate ITR Report
-              </Button>
+            {/* Deductions Overview */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-lg">Deductions Breakdown</CardTitle>
+                <CardDescription>Current utilization of tax-saving sections</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-5">
+                  {deductionsData && Object.entries(deductionsData.claimed).map(([key, value]: any) => {
+                    if (value === 0 && key !== 'section80C' && key !== 'section80D') return null;
+                    const limit = deductionsData.limits[key] || 0;
+                    const percentage = limit > 0 ? (value / limit) * 100 : 0;
 
-              {!canGenerateReport && (
-                <p className="text-xs text-center text-muted-foreground">
-                  Please select both ITR form and salary range to continue
-                </p>
+                    return (
+                      <div key={key} className="space-y-2">
+                        <div className="flex justify-between items-center text-sm">
+                          <span className="font-medium text-foreground">{key.replace('section', 'Section ')}</span>
+                          <span className="text-muted-foreground">₹{(value ?? 0).toLocaleString()} / ₹{(limit ?? 0).toLocaleString()}</span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary rounded-full transition-all"
+                            style={{ width: `${Math.min(percentage, 100)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })}
+                  <div className="pt-4 border-t border-border flex justify-between items-center">
+                    <span className="text-sm font-bold">Total Deductions</span>
+                    <span className="text-lg font-extrabold text-primary">₹{(recommended?.totalDeductions ?? 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Comparison Tab */}
+        <TabsContent value="comparison" className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Old Regime Estimate */}
+            <Card className={cn(
+              "bg-card border-border relative overflow-hidden",
+              comparison?.recommended === 'old' && "ring-2 ring-primary"
+            )}>
+              {comparison?.recommended === 'old' && (
+                <div className="absolute top-0 right-0">
+                  <div className="bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-tighter">
+                    Recommended
+                  </div>
+                </div>
               )}
-            </CardContent>
-          </Card>
+              <CardHeader className="bg-secondary/30">
+                <CardTitle>Old Tax Regime</CardTitle>
+                <CardDescription>With all deductions and exemptions</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-b border-border pb-2">
+                    <span className="text-sm text-muted-foreground">Taxable Income</span>
+                    <span className="font-semibold font-mono">₹{(comparison?.oldRegime.taxableIncome ?? 0).toLocaleString()}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground uppercase">Slab Breakdown</p>
+                    {comparison?.oldRegime.slabBreakdown.map((slab, i) => (
+                      <div key={i} className="flex justify-between items-center text-sm py-1">
+                        <span className="text-muted-foreground">{slab.slab} ({slab.rate}%)</span>
+                        <span className="font-medium">₹{(slab.tax ?? 0).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between items-center pt-2 text-sm">
+                    <span className="text-muted-foreground">Add 4% Cess</span>
+                    <span className="font-medium">₹{(comparison?.oldRegime.cess ?? 0).toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 flex justify-between items-center">
+                  <span className="font-bold">Total Tax Due</span>
+                  <span className="text-xl font-black text-primary">₹{(comparison?.oldRegime.totalTax ?? 0).toLocaleString()}</span>
+                </div>
+              </CardContent>
+            </Card>
 
-          {/* Quick Tips */}
-          <Card className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/20">
-            <CardContent className="p-4">
-              <h4 className="font-medium text-foreground mb-3 flex items-center gap-2">
-                <HelpCircle className="w-4 h-4 text-amber-400" />
-                Quick Tips
-              </h4>
-              <ul className="space-y-2 text-sm text-muted-foreground">
-                <li className="flex items-start gap-2">
-                  <span className="text-amber-400 mt-1">•</span>
-                  <span>
-                    <strong className="text-foreground">ITR-1</strong> is for most salaried employees with income up to
-                    ₹50 lakh
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-amber-400 mt-1">•</span>
-                  <span>
-                    If you have <strong className="text-foreground">capital gains</strong> from stocks/mutual funds, use
-                    ITR-2
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-amber-400 mt-1">•</span>
-                  <span>
-                    Freelancers and businesses should use <strong className="text-foreground">ITR-3 or ITR-4</strong>
-                  </span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-amber-400 mt-1">•</span>
-                  <span>
-                    Due date for FY 2025-26: <strong className="text-foreground">31st July 2026</strong>
-                  </span>
-                </li>
-              </ul>
+            {/* New Regime Estimate */}
+            <Card className={cn(
+              "bg-card border-border relative overflow-hidden",
+              comparison?.recommended === 'new' && "ring-2 ring-primary"
+            )}>
+              {comparison?.recommended === 'new' && (
+                <div className="absolute top-0 right-0">
+                  <div className="bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 rounded-bl-lg uppercase tracking-tighter">
+                    Recommended
+                  </div>
+                </div>
+              )}
+              <CardHeader className="bg-secondary/30">
+                <CardTitle>New Tax Regime</CardTitle>
+                <CardDescription>Lower rates, no deductions</CardDescription>
+              </CardHeader>
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center border-b border-border pb-2">
+                    <span className="text-sm text-muted-foreground">Taxable Income</span>
+                    <span className="font-semibold font-mono">₹{(comparison?.newRegime.taxableIncome ?? 0).toLocaleString()}</span>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground uppercase">Slab Breakdown</p>
+                    {comparison?.newRegime.slabBreakdown.map((slab, i) => (
+                      <div key={i} className="flex justify-between items-center text-sm py-1">
+                        <span className="text-muted-foreground">{slab.slab} ({slab.rate}%)</span>
+                        <span className="font-medium">₹{(slab.tax ?? 0).toLocaleString()}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between items-center pt-2 text-sm">
+                    <span className="text-muted-foreground">Add 4% Cess</span>
+                    <span className="font-medium">₹{(comparison?.newRegime.cess ?? 0).toLocaleString()}</span>
+                  </div>
+                </div>
+                <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 flex justify-between items-center">
+                  <span className="font-bold">Total Tax Due</span>
+                  <span className="text-xl font-black text-primary">₹{(comparison?.newRegime.totalTax ?? 0).toLocaleString()}</span>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card className="bg-amber-500/5 border border-amber-500/20">
+            <CardContent className="p-4 flex items-start gap-4">
+              <Info className="w-5 h-5 text-amber-400 mt-1 shrink-0" />
+              <div className="text-sm text-balance">
+                <p className="font-medium text-amber-400 mb-1">Disclamer</p>
+                <p className="text-muted-foreground">
+                  The values shown here are estimates based on your inputs and current Indian Tax Laws for FY 2025-26.
+                  Always consult a certified Tax professional before filing returns.
+                </p>
+              </div>
             </CardContent>
           </Card>
-        </div>
-      </div>
-    </>
+        </TabsContent>
+      </Tabs>
+    </div>
   )
 }

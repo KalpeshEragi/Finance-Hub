@@ -38,6 +38,8 @@ import dashboardRoutes from './routes/dashboard.routes';
 import alertsRoutes from './routes/alerts.routes';
 import categorizationRoutes from './routes/categorization.routes';
 import paymentMethodsRoutes from './routes/paymentMethods.routes';
+import recurringRoutes from './routes/recurring.routes';
+import investmentRoutes from './routes/investment.routes';
 import { getRegisteredRoutes } from './utils/routeRegistry'
 
 // Import middleware
@@ -182,6 +184,12 @@ function createApp(): Express {
 
     // Payment methods management (protected)
     app.use('/payment-methods', paymentMethodsRoutes);
+
+    // Recurring subscriptions (protected)
+    app.use('/recurrings', recurringRoutes);
+
+    // Investment holdings (protected)
+    app.use('/investments', investmentRoutes);
 
     // ===========================================================================
     // DEVELOPMENT UTILITIES

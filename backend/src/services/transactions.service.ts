@@ -113,6 +113,202 @@ export async function createBulkTransactions(
     return results;
 }
 
+/**
+ * @interface StatementTransaction
+ * @description Transaction format from AI Engine statement parser.
+ */
+interface StatementTransaction {
+    date: string;
+    description: string;
+    amount: number;
+    type: 'income' | 'expense';
+    reference?: string;
+    balance?: number;
+}
+
+/**
+ * @interface StatementImportPayload
+ * @description Payload format from AI Engine /parse/statement endpoint.
+ */
+interface StatementImportPayload {
+    source: 'bank_statement';
+    transactions: StatementTransaction[];
+}
+
+/**
+ * @function importStatementTransactions
+ * @description Imports parsed transactions from AI Engine statement parser.
+ * 
+ * This function:
+ * 1. Receives normalized transactions from AI Engine
+ * 2. Validates and normalizes each transaction
+ * 3. Auto-categorizes using AI Engine /categorize endpoint
+ * 4. Saves transactions with categories to database
+ * 
+ * @param userId - User ID
+ * @param payload - Parsed statement from AI Engine
+ * @returns Import summary with counts and any errors
+ */
+export async function importStatementTransactions(
+    userId: string,
+    payload: StatementImportPayload
+): Promise<{
+    created: number;
+    failed: number;
+    categorized: number;
+    errors: Array<{ row: number; error: string }>;
+}> {
+    const results = {
+        created: 0,
+        failed: 0,
+        categorized: 0,
+        errors: [] as Array<{ row: number; error: string }>,
+    };
+
+    if (!payload.transactions || payload.transactions.length === 0) {
+        return results;
+    }
+
+    // ==========================================================
+    // STEP 1: Validate and normalize all transactions first
+    // ==========================================================
+    const validatedTransactions: Array<{
+        index: number;
+        date: Date;
+        description: string;
+        amount: number;
+        type: 'income' | 'expense';
+    }> = [];
+
+    for (let i = 0; i < payload.transactions.length; i++) {
+        const txn = payload.transactions[i];
+
+        if (!txn) {
+            results.failed++;
+            results.errors.push({ row: i + 1, error: 'Empty transaction data' });
+            continue;
+        }
+
+        // Validate and normalize date
+        let parsedDate: Date;
+        if (txn.date && typeof txn.date === 'string' && txn.date.trim() !== '') {
+            parsedDate = new Date(txn.date);
+            // Check if date is valid
+            if (isNaN(parsedDate.getTime())) {
+                // Try parsing as DD/MM/YYYY format
+                const parts = txn.date.split(/[\/\-]/);
+                if (parts.length === 3) {
+                    // Assume DD/MM/YYYY or DD-MM-YYYY
+                    const [day, month, year] = parts;
+                    parsedDate = new Date(
+                        parseInt(year.length === 2 ? `20${year}` : year),
+                        parseInt(month) - 1,
+                        parseInt(day)
+                    );
+                }
+                // If still invalid, use current date
+                if (isNaN(parsedDate.getTime())) {
+                    parsedDate = new Date();
+                }
+            }
+        } else {
+            parsedDate = new Date();
+        }
+
+        // Validate and normalize amount
+        let amount: number;
+        if (typeof txn.amount === 'number' && !isNaN(txn.amount) && txn.amount > 0) {
+            amount = Math.abs(txn.amount);
+        } else if (typeof txn.amount === 'string') {
+            // Try to parse string amount
+            const cleaned = txn.amount.toString().replace(/[₹,\s]/g, '');
+            amount = parseFloat(cleaned);
+            if (isNaN(amount) || amount <= 0) {
+                results.failed++;
+                results.errors.push({ row: i + 1, error: `Invalid amount: ${txn.amount}` });
+                continue;
+            }
+        } else {
+            results.failed++;
+            results.errors.push({ row: i + 1, error: `Missing or invalid amount` });
+            continue;
+        }
+
+        // Validate type
+        if (txn.type !== 'income' && txn.type !== 'expense') {
+            results.failed++;
+            results.errors.push({ row: i + 1, error: `Invalid type: ${txn.type}` });
+            continue;
+        }
+
+        validatedTransactions.push({
+            index: i,
+            date: parsedDate,
+            description: txn.description || '',
+            amount: amount,
+            type: txn.type,
+        });
+    }
+
+    if (validatedTransactions.length === 0) {
+        return results;
+    }
+
+    // ==========================================================
+    // STEP 2: Categorize via AI Engine
+    // ==========================================================
+    const transactionsToCateg = validatedTransactions.map(t => ({
+        id: `temp_${t.index}`,
+        description: t.description,
+        merchant: '',
+        amount: t.amount,
+        type: t.type,
+    }));
+
+    let categorizations: Record<string, string> = {};
+    try {
+        const categResult = await aiClient.categorize(transactionsToCateg);
+        if (categResult.results) {
+            for (const r of categResult.results) {
+                categorizations[r.transactionId] = r.category;
+            }
+            results.categorized = categResult.results.length;
+        }
+    } catch (error) {
+        console.error('AI categorization failed, using defaults:', error);
+    }
+
+    // ==========================================================
+    // STEP 3: Save to database
+    // ==========================================================
+    for (const txn of validatedTransactions) {
+        try {
+            const category = categorizations[`temp_${txn.index}`] || 'Uncategorized';
+
+            await Transaction.create({
+                userId: new mongoose.Types.ObjectId(userId),
+                amount: txn.amount,
+                type: txn.type,
+                category: category,
+                description: txn.description,
+                date: txn.date,
+                merchant: '',
+                isAutoCategorized: !!categorizations[`temp_${txn.index}`],
+            });
+
+            results.created++;
+        } catch (error) {
+            results.failed++;
+            results.errors.push({
+                row: txn.index + 1,
+                error: error instanceof Error ? error.message : 'Database error',
+            });
+        }
+    }
+
+    return results;
+}
+
 // =============================================================================
 // READ OPERATIONS
 // =============================================================================
@@ -397,6 +593,7 @@ function formatTransactionForResponse(
 export const transactionsService = {
     createTransaction,
     createBulkTransactions,
+    importStatementTransactions,
     getTransactions,
     getTransactionById,
     updateTransaction,

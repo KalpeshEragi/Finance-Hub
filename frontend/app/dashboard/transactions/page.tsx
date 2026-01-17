@@ -64,17 +64,20 @@ export default function TransactionsPage() {
             setIsLoading(true)
             const filters = typeFilter !== 'all' ? { type: typeFilter } : {}
             const response = await getTransactions({ ...filters, limit: 50 })
-            setTransactions(response.data)
+            const data = response?.data ?? []
+            setTransactions(data)
 
             // Calculate totals
-            const income = response.data
+            const income = data
                 .filter(t => t.type === 'income')
                 .reduce((sum, t) => sum + t.amount, 0)
-            const expense = response.data
+            const expense = data
                 .filter(t => t.type === 'expense')
                 .reduce((sum, t) => sum + t.amount, 0)
             setTotals({ income, expense })
         } catch (err) {
+            setTransactions([])
+            setTotals({ income: 0, expense: 0 })
             setError(err instanceof Error ? err.message : 'Failed to load transactions')
         } finally {
             setIsLoading(false)

@@ -15,6 +15,8 @@ import {
   PiggyBank,
   Shield,
   Building2,
+  PieChart,
+  Brain,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -23,6 +25,7 @@ import { UserMenu } from "./user-menu"
 const mainNavItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
   { icon: ArrowLeftRight, label: "Transactions", href: "/dashboard/transactions" },
+  { icon: PieChart, label: "Budgeting", href: "/dashboard/budget" },
   { icon: Building2, label: "Connect Bank", href: "/dashboard/connect-bank" },
   { icon: Wallet, label: "Accounts", href: "/dashboard/accounts" },
   { icon: TrendingUp, label: "Investments", href: "/dashboard/investments" },
@@ -31,6 +34,7 @@ const mainNavItems = [
   { icon: Receipt, label: "Tax Center", href: "/dashboard/tax" },
   { icon: PiggyBank, label: "Goals", href: "/dashboard/goals" },
   { icon: Shield, label: "Emergency Fund", href: "/dashboard/emergency-fund" },
+  { icon: Brain, label: "Virtual Twin", href: "/dashboard/virtual-twin" },
 ]
 
 const creditCards = [

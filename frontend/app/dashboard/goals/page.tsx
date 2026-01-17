@@ -1,88 +1,163 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { GoalsOverview } from "@/components/goals/goals-overview"
 import { GoalsGrid } from "@/components/goals/goals-grid"
 import { AddGoalDialog } from "@/components/goals/add-goal-dialog"
 import { SavingsHistory } from "@/components/goals/savings-history"
 import { GoalInsights } from "@/components/goals/goal-insights"
+import { getGoals, createGoal, deleteGoal, updateGoal, type Goal as BackendGoal } from "@/lib/api/goals"
+import { useToast } from "@/components/ui/use-toast"
+import { Loader2 } from "lucide-react"
 
-// Sample goals data
-const initialGoals = [
-  {
-    id: "1",
-    name: "iPhone 16 Pro Max",
-    icon: "📱",
-    color: "#3b82f6",
-    category: "Electronics",
-    targetAmount: 145000,
-    savedAmount: 87000,
-    targetDate: new Date(2026, 5, 15),
-    createdAt: new Date(2025, 10, 1),
-    contributions: [
-      { date: new Date(2026, 0, 10), amount: 15000 },
-      { date: new Date(2026, 0, 5), amount: 10000 },
-      { date: new Date(2025, 11, 20), amount: 12000 },
-    ],
-  },
-  {
-    id: "2",
-    name: "Europe Trip",
-    icon: "✈️",
-    color: "#10b981",
-    category: "Travel",
-    targetAmount: 350000,
-    savedAmount: 125000,
-    targetDate: new Date(2026, 11, 1),
-    createdAt: new Date(2025, 6, 1),
-    contributions: [
-      { date: new Date(2026, 0, 12), amount: 20000 },
-      { date: new Date(2025, 11, 28), amount: 25000 },
-    ],
-  },
-  {
-    id: "3",
-    name: "MacBook Pro M4",
-    icon: "💻",
-    color: "#8b5cf6",
-    category: "Electronics",
-    targetAmount: 250000,
-    savedAmount: 250000,
-    targetDate: new Date(2026, 2, 1),
-    createdAt: new Date(2025, 8, 15),
-    contributions: [{ date: new Date(2026, 0, 8), amount: 50000 }],
-  },
-  {
-    id: "4",
-    name: "Home Down Payment",
-    icon: "🏠",
-    color: "#ec4899",
-    category: "Home",
-    targetAmount: 1500000,
-    savedAmount: 450000,
-    targetDate: new Date(2028, 6, 1),
-    createdAt: new Date(2025, 1, 1),
-    contributions: [{ date: new Date(2026, 0, 1), amount: 50000 }],
-  },
-  {
-    id: "5",
-    name: "Wedding Gift",
-    icon: "🎁",
-    color: "#06b6d4",
-    category: "Gift",
-    targetAmount: 50000,
-    savedAmount: 15000,
-    targetDate: new Date(2026, 3, 20),
-    createdAt: new Date(2026, 0, 5),
-    contributions: [
-      { date: new Date(2026, 0, 15), amount: 10000 },
-      { date: new Date(2026, 0, 5), amount: 5000 },
-    ],
-  },
-]
+// Updated Goal interface to match what components expect
+interface Goal {
+  id: string
+  name: string
+  icon: string
+  color: string
+  category: string
+  targetAmount: number
+  savedAmount: number
+  targetDate: Date
+  createdAt: Date
+  contributions: { date: Date; amount: number }[]
+}
+
+// Category mapping for icons and colors since backend doesn't store them
+const CATEGORY_MAP: Record<string, { icon: string, color: string }> = {
+  "Car": { icon: "🚗", color: "#10b981" },
+  "Home": { icon: "🏠", color: "#3b82f6" },
+  "Travel": { icon: "✈️", color: "#8b5cf6" },
+  "Electronics": { icon: "💻", color: "#f59e0b" },
+  "Education": { icon: "🎓", color: "#ef4444" },
+  "Gift": { icon: "🎁", color: "#ec4899" },
+  "Jewelry": { icon: "💎", color: "#06b6d4" },
+  "Fitness": { icon: "🏋️", color: "#84cc16" },
+}
+
+const DEFAULT_STYLE = { icon: "🎯", color: "#3b82f6" }
 
 export default function GoalsPage() {
-  const [goals, setGoals] = useState(initialGoals)
+  const [goals, setGoals] = useState<Goal[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const { toast } = useToast()
+
+  const mapBackendGoal = useCallback((bg: BackendGoal): Goal => {
+    const style = CATEGORY_MAP[bg.category || ""] || DEFAULT_STYLE
+    return {
+      id: bg.id,
+      name: bg.title,
+      icon: style.icon,
+      color: style.color,
+      category: bg.category || "Other",
+      targetAmount: bg.targetAmount,
+      savedAmount: bg.currentAmount,
+      targetDate: new Date(bg.deadline),
+      createdAt: new Date(bg.createdAt),
+      contributions: [], // Backend doesn't return full contribution history in list yet
+    }
+  }, [])
+
+  const fetchGoals = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      const response = await getGoals()
+      const data = response?.data ?? []
+      setGoals(data.map(mapBackendGoal))
+    } catch (error) {
+      setGoals([])
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to load goals",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }, [mapBackendGoal, toast])
+
+  useEffect(() => {
+    fetchGoals()
+  }, [fetchGoals])
+
+  const handleAddGoal = async (newGoal: {
+    name: string
+    targetAmount: number
+    duration: number
+    durationType: "months" | "years"
+    icon: string
+    color: string
+    category: string
+  }) => {
+    const deadline = new Date()
+    if (newGoal.durationType === "months") {
+      deadline.setMonth(deadline.getMonth() + newGoal.duration)
+    } else {
+      deadline.setFullYear(deadline.getFullYear() + newGoal.duration)
+    }
+
+    try {
+      const { data } = await createGoal({
+        title: newGoal.name,
+        targetAmount: newGoal.targetAmount,
+        deadline: deadline.toISOString(),
+        category: newGoal.category,
+      })
+
+      setGoals(prev => [...prev, mapBackendGoal(data)])
+      toast({
+        title: "Success",
+        description: "Goal created successfully",
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to create goal",
+      })
+    }
+  }
+
+  const handleAddMoney = async (goalId: string, amount: number) => {
+    const goal = goals.find(g => g.id === goalId)
+    if (!goal) return
+
+    try {
+      const { data } = await updateGoal(goalId, {
+        currentAmount: goal.savedAmount + amount
+      })
+
+      setGoals(prev => prev.map(g => g.id === goalId ? mapBackendGoal(data) : g))
+      toast({
+        title: "Success",
+        description: `Added ₹${amount.toLocaleString()} to ${goal.name}`,
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update goal",
+      })
+    }
+  }
+
+  const handleDeleteGoal = async (goalId: string) => {
+    try {
+      await deleteGoal(goalId)
+      setGoals(prev => prev.filter((g) => g.id !== goalId))
+      toast({
+        title: "Deleted",
+        description: "Goal removed successfully",
+      })
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete goal",
+      })
+    }
+  }
 
   // Calculate totals for overview
   const totalTargetAmount = goals.reduce((sum, g) => sum + g.targetAmount, 0)
@@ -101,55 +176,13 @@ export default function GoalsPage() {
     })),
   )
 
-  const handleAddGoal = (newGoal: {
-    name: string
-    targetAmount: number
-    duration: number
-    durationType: "months" | "years"
-    icon: string
-    color: string
-    category: string
-  }) => {
-    const targetDate = new Date()
-    if (newGoal.durationType === "months") {
-      targetDate.setMonth(targetDate.getMonth() + newGoal.duration)
-    } else {
-      targetDate.setFullYear(targetDate.getFullYear() + newGoal.duration)
-    }
-
-    const goal = {
-      id: Date.now().toString(),
-      name: newGoal.name,
-      icon: newGoal.icon,
-      color: newGoal.color,
-      category: newGoal.category,
-      targetAmount: newGoal.targetAmount,
-      savedAmount: 0,
-      targetDate,
-      createdAt: new Date(),
-      contributions: [],
-    }
-
-    setGoals([...goals, goal])
-  }
-
-  const handleAddMoney = (goalId: string, amount: number) => {
-    setGoals(
-      goals.map((goal) => {
-        if (goal.id === goalId) {
-          return {
-            ...goal,
-            savedAmount: Math.min(goal.savedAmount + amount, goal.targetAmount),
-            contributions: [...goal.contributions, { date: new Date(), amount }],
-          }
-        }
-        return goal
-      }),
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh]">
+        <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+        <p className="text-muted-foreground">Loading your goals...</p>
+      </div>
     )
-  }
-
-  const handleDeleteGoal = (goalId: string) => {
-    setGoals(goals.filter((g) => g.id !== goalId))
   }
 
   return (
@@ -186,3 +219,4 @@ export default function GoalsPage() {
     </>
   )
 }
+

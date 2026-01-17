@@ -5,6 +5,7 @@
  * Routes:
  * - POST /transactions - Create single transaction
  * - POST /transactions/bulk - Bulk import transactions
+ * - POST /transactions/import - Import from AI Engine statement parser
  * - GET /transactions - List with filters and pagination
  * - GET /transactions/:id - Get single transaction
  * - PUT /transactions/:id - Update transaction
@@ -37,6 +38,14 @@ router.post('/', transactionsController.create);
  * @access Private
  */
 router.post('/bulk', transactionsController.createBulk);
+
+/**
+ * @route POST /transactions/import
+ * @description Import parsed transactions from AI Engine statement parser
+ * @access Private
+ * @body { source: 'bank_statement', transactions: [...] }
+ */
+router.post('/import', transactionsController.importStatement);
 
 /**
  * @route GET /transactions

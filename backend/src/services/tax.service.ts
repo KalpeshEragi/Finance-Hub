@@ -59,7 +59,7 @@ async function getOrCreateProfile(userId: string, financialYear?: string) {
                 homeLoanInterest: 0,
                 hra: 0,
                 lta: 0,
-                standardDeduction: 50000,
+                standardDeduction: 75000,
                 professionalTax: 0,
                 nps: 0,
             },
@@ -180,6 +180,11 @@ function calculateTaxForRegime(
     grossIncome: number,
     deductions: DeductionDetails
 ): TaxEstimate {
+    // Use regime-specific standard deduction
+    const standardDeduction = regime === 'old'
+        ? (DEDUCTION_LIMITS.standardDeductionOld || 50000)
+        : (DEDUCTION_LIMITS.standardDeductionNew || 75000);
+
     // Calculate total deductions
     const totalDeductions =
         deductions.section80C +
@@ -188,7 +193,7 @@ function calculateTaxForRegime(
         deductions.homeLoanInterest +
         deductions.hra +
         deductions.lta +
-        deductions.standardDeduction +
+        standardDeduction +
         deductions.professionalTax +
         deductions.nps;
 
