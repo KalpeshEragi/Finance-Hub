@@ -37,6 +37,7 @@ import goalsRoutes from './routes/goals.routes';
 import dashboardRoutes from './routes/dashboard.routes';
 import alertsRoutes from './routes/alerts.routes';
 import categorizationRoutes from './routes/categorization.routes';
+import paymentMethodsRoutes from './routes/paymentMethods.routes';
 import recurringRoutes from './routes/recurring.routes';
 import investmentRoutes from './routes/investment.routes';
 import { getRegisteredRoutes } from './utils/routeRegistry'
@@ -73,9 +74,7 @@ function createApp(): Express {
      * In production, you should restrict this to specific origins.
      */
     app.use(cors({
-        origin: process.env['NODE_ENV'] === 'production'
-            ? process.env['FRONTEND_URL']
-            : '*',
+        origin: true, // Reflects the request origin in development
         credentials: true,
         methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
         allowedHeaders: ['Content-Type', 'Authorization'],
@@ -182,6 +181,9 @@ function createApp(): Express {
 
     // AI categorization (protected)
     app.use('/categorization', categorizationRoutes);
+
+    // Payment methods management (protected)
+    app.use('/payment-methods', paymentMethodsRoutes);
 
     // Recurring subscriptions (protected)
     app.use('/recurrings', recurringRoutes);

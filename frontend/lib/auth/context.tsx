@@ -18,7 +18,7 @@ function setCookie(name: string, value: string, days: number = 7) {
 function getCookie(name: string): string | null {
     const value = `; ${document.cookie}`;
     const parts = value.split(`; ${name}=`);
-    if (parts.length === 2) {
+    if (parts.length >= 2) {
         const cookieValue = parts.pop()?.split(';').shift();
         return cookieValue ? decodeURIComponent(cookieValue) : null;
     }

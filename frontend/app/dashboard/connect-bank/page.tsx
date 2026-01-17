@@ -5,6 +5,22 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+} from "@/components/ui/dialog"
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from "@/components/ui/select"
 import {
     Building2,
     Shield,
@@ -15,8 +31,13 @@ import {
     Eye,
     Calendar,
     RefreshCw,
+    CreditCard,
+    User,
+    Hash,
+    FileText,
 } from "lucide-react"
 import { importTransactions, type TransactionInput } from "@/lib/api/transactions"
+import { addBankAccount } from "@/lib/api/paymentMethods"
 
 const BANKS = [
     { id: 'sbi', name: 'State Bank of India', logo: '🏦', color: 'bg-blue-500' },
@@ -45,21 +66,94 @@ const SAMPLE_TRANSACTIONS: TransactionInput[] = [
 
 type Step = 'select' | 'consent' | 'connecting' | 'success'
 
+interface BankDetailsForm {
+    accountHolderName: string
+    accountNumber: string
+    confirmAccountNumber: string
+    ifscCode: string
+    accountType: string
+}
+
 export default function ConnectBankPage() {
     const [step, setStep] = useState<Step>('select')
     const [selectedBank, setSelectedBank] = useState<string | null>(null)
     const [isLoading, setIsLoading] = useState(false)
+    const [showBankDetailsModal, setShowBankDetailsModal] = useState(false)
+    const [bankDetails, setBankDetails] = useState<BankDetailsForm>({
+        accountHolderName: '',
+        accountNumber: '',
+        confirmAccountNumber: '',
+        ifscCode: '',
+        accountType: '',
+    })
+    const [formErrors, setFormErrors] = useState<Partial<BankDetailsForm>>({})
     const router = useRouter()
 
     const handleBankSelect = (bankId: string) => {
         setSelectedBank(bankId)
     }
 
-    const handleConsent = async () => {
+    const handleConsentApprove = () => {
+        // Show the bank details modal instead of directly connecting
+        setShowBankDetailsModal(true)
+    }
+
+    const validateBankDetails = (): boolean => {
+        const errors: Partial<BankDetailsForm> = {}
+
+        if (!bankDetails.accountHolderName.trim()) {
+            errors.accountHolderName = 'Account holder name is required'
+        }
+
+        if (!bankDetails.accountNumber.trim()) {
+            errors.accountNumber = 'Account number is required'
+        } else if (!/^\d{9,18}$/.test(bankDetails.accountNumber)) {
+            errors.accountNumber = 'Enter a valid account number (9-18 digits)'
+        }
+
+        if (!bankDetails.confirmAccountNumber.trim()) {
+            errors.confirmAccountNumber = 'Please confirm your account number'
+        } else if (bankDetails.accountNumber !== bankDetails.confirmAccountNumber) {
+            errors.confirmAccountNumber = 'Account numbers do not match'
+        }
+
+        if (!bankDetails.ifscCode.trim()) {
+            errors.ifscCode = 'IFSC code is required'
+        } else if (!/^[A-Z]{4}0[A-Z0-9]{6}$/.test(bankDetails.ifscCode.toUpperCase())) {
+            errors.ifscCode = 'Enter a valid IFSC code (e.g., SBIN0001234)'
+        }
+
+        if (!bankDetails.accountType) {
+            errors.accountType = 'Please select account type'
+        }
+
+        setFormErrors(errors)
+        return Object.keys(errors).length === 0
+    }
+
+    const handleBankDetailsSubmit = async () => {
+        if (!validateBankDetails()) return
+
+        setShowBankDetailsModal(false)
         setStep('connecting')
 
         // Simulate connection delay
         await new Promise(resolve => setTimeout(resolve, 2000))
+
+        // Save bank account to payment methods
+        try {
+            const selectedBankData = BANKS.find(b => b.id === selectedBank)
+            await addBankAccount({
+                bankName: selectedBankData?.name || 'Bank Account',
+                accountNumber: bankDetails.accountNumber,
+                ifscCode: bankDetails.ifscCode.toUpperCase(),
+                accountType: bankDetails.accountType,
+                accountHolderName: bankDetails.accountHolderName,
+                isPrimary: false,
+            })
+        } catch (error) {
+            console.error('Failed to save bank account:', error)
+        }
 
         // Import sample data
         try {
@@ -68,6 +162,14 @@ export default function ConnectBankPage() {
         } catch (error) {
             // If it fails, still show success for demo purposes
             setStep('success')
+        }
+    }
+
+    const handleInputChange = (field: keyof BankDetailsForm, value: string) => {
+        setBankDetails(prev => ({ ...prev, [field]: value }))
+        // Clear error when user types
+        if (formErrors[field]) {
+            setFormErrors(prev => ({ ...prev, [field]: undefined }))
         }
     }
 
@@ -97,8 +199,8 @@ export default function ConnectBankPage() {
                                     key={bank.id}
                                     onClick={() => handleBankSelect(bank.id)}
                                     className={`flex items-center gap-3 p-4 rounded-lg border transition-all ${selectedBank === bank.id
-                                            ? 'border-primary bg-primary/10'
-                                            : 'border-border hover:border-primary/50 hover:bg-secondary/50'
+                                        ? 'border-primary bg-primary/10'
+                                        : 'border-border hover:border-primary/50 hover:bg-secondary/50'
                                         }`}
                                 >
                                     <span className="text-2xl">{bank.logo}</span>
@@ -186,13 +288,163 @@ export default function ConnectBankPage() {
                             <Button variant="outline" className="flex-1" onClick={() => setStep('select')}>
                                 Cancel
                             </Button>
-                            <Button className="flex-1" onClick={handleConsent}>
+                            <Button className="flex-1" onClick={handleConsentApprove}>
                                 Approve & Connect
                             </Button>
                         </div>
                     </CardContent>
                 </Card>
             )}
+
+            {/* Bank Details Modal */}
+            <Dialog open={showBankDetailsModal} onOpenChange={setShowBankDetailsModal}>
+                <DialogContent className="sm:max-w-[420px] bg-card border-border p-5">
+                    <DialogHeader className="pb-2">
+                        <div className="flex items-center gap-3">
+                            {selectedBankData && (
+                                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
+                                    <span className="text-lg">{selectedBankData.logo}</span>
+                                </div>
+                            )}
+                            <div>
+                                <DialogTitle className="text-foreground text-base">Enter Bank Details</DialogTitle>
+                                <DialogDescription className="text-muted-foreground text-xs">
+                                    {selectedBankData?.name}
+                                </DialogDescription>
+                            </div>
+                        </div>
+                    </DialogHeader>
+
+                    <div className="space-y-3">
+                        {/* Account Holder Name */}
+                        <div className="space-y-1">
+                            <Label htmlFor="accountHolderName" className="text-foreground text-sm flex items-center gap-2">
+                                <User className="w-3.5 h-3.5 text-muted-foreground" />
+                                Account Holder Name
+                            </Label>
+                            <Input
+                                id="accountHolderName"
+                                placeholder="Enter name as per bank records"
+                                value={bankDetails.accountHolderName}
+                                onChange={(e) => handleInputChange('accountHolderName', e.target.value)}
+                                className={`bg-secondary/50 border-border h-9 text-sm ${formErrors.accountHolderName ? 'border-red-500' : ''}`}
+                            />
+                            {formErrors.accountHolderName && (
+                                <p className="text-xs text-red-500">{formErrors.accountHolderName}</p>
+                            )}
+                        </div>
+
+                        {/* Account Number */}
+                        <div className="space-y-1">
+                            <Label htmlFor="accountNumber" className="text-foreground text-sm flex items-center gap-2">
+                                <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
+                                Account Number
+                            </Label>
+                            <Input
+                                id="accountNumber"
+                                placeholder="Enter account number"
+                                value={bankDetails.accountNumber}
+                                onChange={(e) => handleInputChange('accountNumber', e.target.value.replace(/\D/g, ''))}
+                                className={`bg-secondary/50 border-border h-9 text-sm ${formErrors.accountNumber ? 'border-red-500' : ''}`}
+                                maxLength={18}
+                            />
+                            {formErrors.accountNumber && (
+                                <p className="text-xs text-red-500">{formErrors.accountNumber}</p>
+                            )}
+                        </div>
+
+                        {/* Confirm Account Number */}
+                        <div className="space-y-1">
+                            <Label htmlFor="confirmAccountNumber" className="text-foreground text-sm flex items-center gap-2">
+                                <CreditCard className="w-3.5 h-3.5 text-muted-foreground" />
+                                Confirm Account Number
+                            </Label>
+                            <Input
+                                id="confirmAccountNumber"
+                                placeholder="Re-enter account number"
+                                value={bankDetails.confirmAccountNumber}
+                                onChange={(e) => handleInputChange('confirmAccountNumber', e.target.value.replace(/\D/g, ''))}
+                                className={`bg-secondary/50 border-border h-9 text-sm ${formErrors.confirmAccountNumber ? 'border-red-500' : ''}`}
+                                maxLength={18}
+                            />
+                            {formErrors.confirmAccountNumber && (
+                                <p className="text-xs text-red-500">{formErrors.confirmAccountNumber}</p>
+                            )}
+                        </div>
+
+                        {/* IFSC Code */}
+                        <div className="space-y-1">
+                            <Label htmlFor="ifscCode" className="text-foreground text-sm flex items-center gap-2">
+                                <Hash className="w-3.5 h-3.5 text-muted-foreground" />
+                                IFSC Code
+                            </Label>
+                            <Input
+                                id="ifscCode"
+                                placeholder="e.g., SBIN0001234"
+                                value={bankDetails.ifscCode}
+                                onChange={(e) => handleInputChange('ifscCode', e.target.value.toUpperCase())}
+                                className={`bg-secondary/50 border-border h-9 text-sm ${formErrors.ifscCode ? 'border-red-500' : ''}`}
+                                maxLength={11}
+                            />
+                            {formErrors.ifscCode && (
+                                <p className="text-xs text-red-500">{formErrors.ifscCode}</p>
+                            )}
+                        </div>
+
+                        {/* Account Type */}
+                        <div className="space-y-1">
+                            <Label htmlFor="accountType" className="text-foreground text-sm flex items-center gap-2">
+                                <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                                Account Type
+                            </Label>
+                            <Select
+                                value={bankDetails.accountType}
+                                onValueChange={(value) => handleInputChange('accountType', value)}
+                            >
+                                <SelectTrigger className={`bg-secondary/50 border-border h-9 text-sm ${formErrors.accountType ? 'border-red-500' : ''}`}>
+                                    <SelectValue placeholder="Select account type" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-card border-border">
+                                    <SelectItem value="savings">Savings Account</SelectItem>
+                                    <SelectItem value="current">Current Account</SelectItem>
+                                    <SelectItem value="salary">Salary Account</SelectItem>
+                                    <SelectItem value="nre">NRE Account</SelectItem>
+                                    <SelectItem value="nro">NRO Account</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {formErrors.accountType && (
+                                <p className="text-xs text-red-500">{formErrors.accountType}</p>
+                            )}
+                        </div>
+
+                        {/* Security Note */}
+                        <div className="flex items-center gap-2 p-2 rounded-lg bg-primary/5 border border-primary/20">
+                            <Lock className="w-3.5 h-3.5 text-primary" />
+                            <p className="text-xs text-muted-foreground">
+                                Your details are encrypted and securely transmitted
+                            </p>
+                        </div>
+
+                        {/* Submit Button */}
+                        <div className="flex gap-2 pt-1">
+                            <Button
+                                variant="outline"
+                                className="flex-1"
+                                onClick={() => setShowBankDetailsModal(false)}
+                            >
+                                Cancel
+                            </Button>
+                            <Button
+                                className="flex-1"
+                                onClick={handleBankDetailsSubmit}
+                            >
+                                <Lock className="w-4 h-4 mr-2" />
+                                Verify & Connect
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
 
             {/* Step: Connecting */}
             {step === 'connecting' && (
@@ -255,3 +507,4 @@ export default function ConnectBankPage() {
         </div>
     )
 }
+

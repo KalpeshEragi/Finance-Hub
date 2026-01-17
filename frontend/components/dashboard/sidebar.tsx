@@ -16,6 +16,7 @@ import {
   Shield,
   Building2,
   PieChart,
+  Brain,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -33,6 +34,7 @@ const mainNavItems = [
   { icon: Receipt, label: "Tax Center", href: "/dashboard/tax" },
   { icon: PiggyBank, label: "Goals", href: "/dashboard/goals" },
   { icon: Shield, label: "Emergency Fund", href: "/dashboard/emergency-fund" },
+  { icon: Brain, label: "Virtual Twin", href: "/dashboard/virtual-twin" },
 ]
 
 const creditCards = [

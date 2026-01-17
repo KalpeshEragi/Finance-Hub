@@ -23,10 +23,11 @@ export default function RecurringsPage() {
     setIsLoading(true)
     try {
       const result = await getRecurrings()
-      if (result.success) {
+      if (result?.success && result?.data) {
         setSubscriptions(result.data)
       }
     } catch (error: any) {
+      setSubscriptions([])
       toast({
         title: "Error fetching subscriptions",
         description: error.message || "Something went wrong",

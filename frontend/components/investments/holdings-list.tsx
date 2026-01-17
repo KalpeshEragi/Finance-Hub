@@ -17,7 +17,7 @@ export function HoldingsList({ holdings, isLoading }: HoldingsListProps) {
 
   const filteredHoldings = holdings.filter(
     (h) =>
-      h.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      h.symbol?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       h.name.toLowerCase().includes(searchQuery.toLowerCase()),
   )
 

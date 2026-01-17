@@ -16,8 +16,10 @@ import {
   ArrowRight,
   PieChart,
   BarChart3,
+  EyeOff,
 } from "lucide-react"
 import { getTransactions, type Transaction } from "@/lib/api/transactions"
+import { useSecuritySettings } from "@/lib/context/security-context"
 import {
   PieChart as RechartsPie,
   Pie,
@@ -64,6 +66,9 @@ export default function DashboardPage() {
   const [categoryData, setCategoryData] = useState<CategoryData[]>([])
   const [monthlyData, setMonthlyData] = useState<MonthlyData[]>([])
   const router = useRouter()
+
+  // Get hideBalances from security context
+  const { hideBalances } = useSecuritySettings()
 
   const processTransactions = useCallback((data: Transaction[]) => {
     // Calculate totals
@@ -112,11 +117,15 @@ export default function DashboardPage() {
 
       try {
         const response = await getTransactions({ limit: 100 })
-        setTransactions(response.data)
-        processTransactions(response.data)
+        const data = response?.data ?? []
+        setTransactions(data)
+        processTransactions(data)
       } catch {
-        // If auth fails, redirect
-        router.push('/auth/login')
+        // Reset to safe defaults on error
+        setTransactions([])
+        setTotals({ income: 0, expense: 0 })
+        setCategoryData([])
+        setMonthlyData([])
       } finally {
         setIsLoading(false)
       }
@@ -126,6 +135,9 @@ export default function DashboardPage() {
   }, [router, processTransactions])
 
   const formatCurrency = (amount: number) => {
+    if (hideBalances) {
+      return "₹••••••"
+    }
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
@@ -216,8 +228,10 @@ export default function DashboardPage() {
         <Card className="bg-card border-border">
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg ${Number(savingsRate) >= 20 ? 'bg-green-500/10' : 'bg-yellow-500/10'}`}>
-                {Number(savingsRate) >= 20 ? (
+              <div className={`p-2 rounded-lg ${hideBalances ? 'bg-gray-500/10' : Number(savingsRate) >= 20 ? 'bg-green-500/10' : 'bg-yellow-500/10'}`}>
+                {hideBalances ? (
+                  <EyeOff className="w-5 h-5 text-gray-400" />
+                ) : Number(savingsRate) >= 20 ? (
                   <TrendingUp className="w-5 h-5 text-green-500" />
                 ) : (
                   <TrendingDown className="w-5 h-5 text-yellow-500" />
@@ -225,8 +239,8 @@ export default function DashboardPage() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Savings Rate</p>
-                <p className={`text-xl font-semibold ${Number(savingsRate) >= 20 ? 'text-green-500' : 'text-yellow-500'}`}>
-                  {savingsRate}%
+                <p className={`text-xl font-semibold ${hideBalances ? 'text-gray-400' : Number(savingsRate) >= 20 ? 'text-green-500' : 'text-yellow-500'}`}>
+                  {hideBalances ? "••%" : `${savingsRate}%`}
                 </p>
               </div>
             </div>
