@@ -18,6 +18,7 @@ import {
 import { getTransactions, deleteTransaction, type Transaction } from "@/lib/api/transactions"
 import { AddTransactionDialog } from "@/components/transactions/add-transaction-dialog"
 import { CSVImportDialog } from "@/components/transactions/csv-import-dialog"
+import { SmartImportDialog } from "@/components/transactions/smart-import-dialog"
 
 const CATEGORY_COLORS: Record<string, string> = {
     'Salary': 'bg-green-500/20 text-green-400',
@@ -129,6 +130,7 @@ export default function TransactionsPage() {
                     <p className="text-muted-foreground text-sm mt-1">Track your income and expenses</p>
                 </div>
                 <div className="flex gap-2">
+                    <SmartImportDialog onSuccess={fetchTransactions} />
                     <Button variant="outline" onClick={() => setShowImportDialog(true)}>
                         <Upload className="w-4 h-4 mr-2" />
                         Import CSV
