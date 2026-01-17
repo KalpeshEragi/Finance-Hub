@@ -26,6 +26,13 @@ router.use(authenticate);
 router.post('/income', taxController.addIncome);
 
 /**
+ * @route PATCH /tax/profile
+ * @description Update tax profile (deductions)
+ * @access Private
+ */
+router.patch('/profile', taxController.updateProfile);
+
+/**
  * @route GET /tax/estimate
  * @description Get tax estimates for both regimes
  * @access Private
@@ -45,5 +52,19 @@ router.get('/regime', taxController.getRegime);
  * @access Private
  */
 router.get('/deductions', taxController.getDeductions);
+
+/**
+ * @route GET /tax/recommendation
+ * @description Get ITR form recommendation
+ * @access Private
+ */
+router.get('/recommendation', taxController.getRecommendation);
+
+/**
+ * @route POST /tax/guidance
+ * @description Get rule-based tax guidance
+ * @access Private
+ */
+router.post('/guidance', taxController.getGuidance);
 
 export default router;

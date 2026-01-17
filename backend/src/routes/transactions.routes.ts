@@ -14,16 +14,36 @@
 
 import { Router } from 'express';
 import { transactionsController } from '../controllers/transactions.controller';
+import { ParserController } from '../controllers/parser.controller';
+import { RecommendationController } from '../controllers/recommendation.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// All transaction routes require authentication
-router.use(authenticate);
+// =============================================================================
+// PUBLIC ROUTES (Demo/AI)
+// =============================================================================
+
+/**
+ * @route POST /transactions/parse
+ * @description Parse unstructured transaction text
+ * @access Public
+ */
+router.post('/parse', ParserController.parseText);
+
+/**
+ * @route POST /transactions/recommend
+ * @description Get best payment source recommendation
+ * @access Public
+ */
+router.post('/recommend', RecommendationController.recommend);
 
 // =============================================================================
-// COLLECTION ROUTES
+// PROTECTED ROUTES
 // =============================================================================
+
+// All transaction routes require authentication
+router.use(authenticate);
 
 /**
  * @route POST /transactions
@@ -38,6 +58,7 @@ router.post('/', transactionsController.create);
  * @access Private
  */
 router.post('/bulk', transactionsController.createBulk);
+
 
 /**
  * @route POST /transactions/import

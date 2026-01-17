@@ -1,0 +1,146 @@
+{
+    "offers": [
+        {
+            "id": "hdfc_regalia_gold",
+            "name": "HDFC Regalia Gold Credit Card",
+            "type": "credit_card",
+            "rules": [
+                {
+                    "category": "Food & Dining",
+                    "merchant_keywords": [
+                        "zomato",
+                        "swiggy",
+                        "eats",
+                        "dining"
+                    ],
+                    "reward_type": "points",
+                    "multiplier": 5,
+                    "min_amount": 150,
+                    "description": "5x Reward Points on Dining"
+                },
+                {
+                    "category": "Shopping",
+                    "merchant_keywords": [
+                        "nykaa",
+                        "myntra",
+                        "marks & spencer",
+                        "reliance"
+                    ],
+                    "reward_type": "points",
+                    "multiplier": 5,
+                    "min_amount": 500,
+                    "description": "5x Reward Points on Fashion"
+                }
+            ],
+            "base_reward": {
+                "rate": 0.013,
+                "description": "4 Points per ₹150 (approx 1.3%)"
+            }
+        },
+        {
+            "id": "amazon_pay_icici",
+            "name": "Amazon Pay ICICI Credit Card",
+            "type": "credit_card",
+            "rules": [
+                {
+                    "merchant_keywords": [
+                        "amazon",
+                        "amazon prime"
+                    ],
+                    "reward_type": "cashback",
+                    "percentage": 5,
+                    "description": "5% Unlimited Cashback on Amazon"
+                },
+                {
+                    "category": "Utilities",
+                    "merchant_keywords": [
+                        "electricity",
+                        "bill",
+                        "recharge"
+                    ],
+                    "reward_type": "cashback",
+                    "percentage": 2,
+                    "description": "2% Cashback on Bills via Amazon Pay"
+                }
+            ],
+            "base_reward": {
+                "rate": 0.01,
+                "description": "1% Flat Cashback everywhere"
+            }
+        },
+        {
+            "id": "sbi_cashback",
+            "name": "SBI Cashback Credit Card",
+            "type": "credit_card",
+            "rules": [
+                {
+                    "category": "Shopping",
+                    "exclude_keywords": [
+                        "amazon",
+                        "flipkart"
+                    ],
+                    "reward_type": "cashback",
+                    "percentage": 5,
+                    "description": "5% Cashback on Online Spends"
+                }
+            ],
+            "base_reward": {
+                "rate": 0.01,
+                "description": "1% Cashback on Offline Spends"
+            }
+        },
+        {
+            "id": "axis_ace",
+            "name": "Axis Ace Credit Card",
+            "type": "credit_card",
+            "rules": [
+                {
+                    "merchant_keywords": [
+                        "bill",
+                        "electricity",
+                        "dth",
+                        "gas",
+                        "google pay"
+                    ],
+                    "reward_type": "cashback",
+                    "percentage": 5,
+                    "description": "5% Cashback on Bill Payments via GPay"
+                },
+                {
+                    "merchant_keywords": [
+                        "swiggy",
+                        "zomato",
+                        "ola"
+                    ],
+                    "reward_type": "cashback",
+                    "percentage": 4,
+                    "description": "4% Cashback on Swiggy/Zomato/Ola"
+                }
+            ],
+            "base_reward": {
+                "rate": 0.02,
+                "description": "2% Flat Cashback"
+            }
+        },
+        {
+            "id": "upi_gpay",
+            "name": "Google Pay UPI",
+            "type": "upi",
+            "rules": [],
+            "base_reward": {
+                "rate": 0,
+                "description": "Scratch cards (variable luck)"
+            }
+        },
+        {
+            "id": "upi_phonepe",
+            "name": "PhonePe UPI",
+            "type": "upi",
+            "rules": [],
+            "base_reward": {
+                "rate": 0,
+                "description": "Coupons & Offers"
+            }
+        }
+    ]
+}

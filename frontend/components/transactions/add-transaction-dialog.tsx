@@ -22,7 +22,7 @@ import { Loader2, Upload, FileText, CheckCircle2, AlertCircle } from "lucide-rea
 import {
     createTransaction,
     parseStatement,
-    importStatementTransactions,
+    importTransactions,
     type TransactionInput,
     type ParsedTransaction,
 } from "@/lib/api/transactions"
@@ -253,6 +253,7 @@ export function AddTransactionDialog({ open, onOpenChange, onSuccess }: AddTrans
                     type: t.type as 'income' | 'expense',
                     reference: t.reference || undefined,
                     balance: t.balance || undefined,
+                    category: 'Uncategorized', // Default category for imports
                 }))
 
             if (transactionsToImport.length === 0) {
@@ -260,7 +261,7 @@ export function AddTransactionDialog({ open, onOpenChange, onSuccess }: AddTrans
                 return
             }
 
-            const result = await importStatementTransactions(transactionsToImport)
+            const result = await importTransactions(transactionsToImport)
 
             setImportResult(result.data)
             setImportStep('success')

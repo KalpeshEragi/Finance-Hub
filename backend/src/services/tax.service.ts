@@ -120,6 +120,30 @@ export async function addIncome(
     };
 }
 
+/**
+ * @function updateDeductions
+ * @description Updates deductions in user's tax profile.
+ */
+export async function updateDeductions(
+    userId: string,
+    deductions: Partial<DeductionDetails>
+): Promise<{ success: true; data: import('../models/taxProfile.model').ITaxProfile }> {
+    const profile = await getOrCreateProfile(userId);
+
+    // Merge deductions
+    profile.deductions = {
+        ...profile.deductions,
+        ...deductions,
+    };
+
+    await profile.save();
+
+    return {
+        success: true,
+        data: profile,
+    };
+}
+
 // =============================================================================
 // TAX ESTIMATION
 // =============================================================================
@@ -144,9 +168,9 @@ export async function getEstimate(userId: string): Promise<TaxComparison> {
 
     // Calculate for both regimes
     const oldRegimeEstimate = calculateTaxForRegime('old', grossIncome, profile.deductions);
-    const newRegimeEstimate = calculateTaxForRegime('new', grossIncome, {
-        ...profile.deductions,
-        // New regime only has standard deduction, no other deductions
+
+    // For New Regime, only standard deduction applies (handled in calculateTaxForRegime)
+    const newRegimeDeductions: DeductionDetails = {
         section80C: 0,
         section80D: 0,
         section80G: 0,
@@ -154,7 +178,10 @@ export async function getEstimate(userId: string): Promise<TaxComparison> {
         hra: 0,
         lta: 0,
         nps: 0,
-    });
+        standardDeduction: 75000, // Will be overwritten by regime-specific logic
+        professionalTax: profile.deductions.professionalTax, // This is allowed in new regime
+    };
+    const newRegimeEstimate = calculateTaxForRegime('new', grossIncome, newRegimeDeductions);
 
     // Determine recommended regime
     const recommended = oldRegimeEstimate.totalTax <= newRegimeEstimate.totalTax ? 'old' : 'new';
@@ -333,15 +360,244 @@ export async function getDeductions(userId: string): Promise<{
     };
 }
 
+/**
+ * @function getITRRecommendation
+ * @description Determines the correct ITR form based on income profile.
+ */
+export async function getITRRecommendation(userId: string): Promise<import('../types/tax.types').ITRRecommendation> {
+    const profile = await getOrCreateProfile(userId);
+    const income = profile.income;
+    const totalIncome =
+        income.salary +
+        income.rental +
+        income.business +
+        income.otherSources +
+        (income.capitalGains?.shortTerm ?? 0) +
+        (income.capitalGains?.longTerm ?? 0);
+
+    let form = "ITR-1";
+    let reason = "Your income primarily comes from salary and other sources.";
+    let description = "For individuals being a resident (other than not ordinarily resident) having total income upto Rs.50 lakh, having Income from Salaries, one house property, other sources (Interest etc.), and agricultural income upto Rs.5000.";
+
+    if (income.business > 0) {
+        form = "ITR-3";
+        reason = "You have income from business or profession.";
+        description = "For individuals and HUFs having income from proprietary business or profession.";
+    } else if (income.capitalGains.shortTerm > 0 || income.capitalGains.longTerm > 0) {
+        form = "ITR-2";
+        reason = "You have capital gains from investments.";
+        description = "For Individuals and HUFs not having income from profits and gains of business or profession.";
+    } else if (totalIncome > 5000000) {
+        form = "ITR-2";
+        reason = "Your total income exceeds ₹50 Lakhs.";
+        description = "For Individuals and HUFs not having income from profits and gains of business or profession.";
+    } else if (income.rental > 0) {
+        // Technically ITR-1 allows one house property. We assume simple case here.
+        // If complex, logic would be more intricate.
+        form = "ITR-1";
+        reason = "You have rental income from a house property.";
+    }
+
+    return {
+        form,
+        reason,
+        description
+    };
+}
+
+// =============================================================================
+// RULE-BASED TAX GUIDANCE
+// =============================================================================
+
+/**
+ * @function getTaxGuidance
+ * @description Provides rule-based tax guidance without exact calculations.
+ */
+export function getTaxGuidance(
+    input: import('../types/tax.types').TaxGuidanceInput
+): import('../types/tax.types').TaxGuidanceOutput {
+    const { individualType, incomeRange, ageGroup, regimePreference, deductions = {} } = input;
+
+    // =========================================================================
+    // A) ITR FORM SUGGESTION (Rule-Based)
+    // =========================================================================
+    let itrForm = { suggested: 'ITR-1', reason: '' };
+
+    if (individualType === 'business_owner') {
+        itrForm = {
+            suggested: 'ITR-3 or ITR-4',
+            reason: 'You have business income. ITR-4 (Sugam) for presumptive taxation, ITR-3 for regular business.'
+        };
+    } else if (individualType === 'self_employed') {
+        itrForm = {
+            suggested: 'ITR-4 (Sugam)',
+            reason: 'For professionals opting for presumptive taxation under Section 44ADA.'
+        };
+    } else if (incomeRange === '50L+') {
+        itrForm = {
+            suggested: 'ITR-2',
+            reason: 'Your income exceeds ₹50 Lakhs, which requires ITR-2 instead of ITR-1.'
+        };
+    } else {
+        itrForm = {
+            suggested: 'ITR-1 (Sahaj)',
+            reason: 'For salaried individuals with total income up to ₹50 Lakhs from salary, one house property, and other sources.'
+        };
+    }
+
+    // =========================================================================
+    // B) REGIME COMPARISON (Explainable, Not Exact)
+    // =========================================================================
+    const oldRegimeBenefits = [
+        '80C: Up to ₹1.5L (EPF, PPF, ELSS, LIC)',
+        '80D: Up to ₹25K-₹1L (Health Insurance)',
+        '80CCD(1B): Additional ₹50K (NPS)',
+        'Section 24: Home Loan Interest up to ₹2L',
+        'Standard Deduction: ₹50K',
+        'HRA Exemption (if applicable)'
+    ];
+
+    const newRegimeBenefits = [
+        'Lower tax slab rates',
+        'Standard Deduction: ₹75K (FY 2025-26)',
+        'Simpler filing - no need to track investments',
+        'No documentation required for deductions'
+    ];
+
+    // Estimate regime recommendation based on deduction usage
+    const hasSignificantDeductions =
+        deductions.hasEPF ||
+        deductions.hasPPF ||
+        deductions.hasELSS ||
+        deductions.hasHomeLoan ||
+        deductions.hasNPS;
+
+    let regimeRecommendation = '';
+    let estimatedDifference = '';
+
+    if (regimePreference === 'old') {
+        regimeRecommendation = 'You prefer Old Regime. Ensure you maximize deductions to benefit from it.';
+    } else if (regimePreference === 'new') {
+        regimeRecommendation = 'You prefer New Regime. No action needed on deductions for tax purposes.';
+    } else if (hasSignificantDeductions) {
+        regimeRecommendation = 'You have deductions like EPF/PPF/NPS/Home Loan. Old Regime may save you ₹15K-₹50K depending on total deductions.';
+        estimatedDifference = '₹15,000 - ₹50,000 (estimate)';
+    } else {
+        regimeRecommendation = 'With limited deductions, New Regime\'s lower rates are likely better for you.';
+    }
+
+    // =========================================================================
+    // C) TAX SAVING SUGGESTIONS (Rule-Based, Never Suggest Taking Loans)
+    // =========================================================================
+    const suggestions: import('../types/tax.types').TaxSavingSuggestion[] = [];
+
+    // 80C suggestions
+    if (!deductions.hasEPF && !deductions.hasPPF && !deductions.hasELSS) {
+        suggestions.push({
+            section: '80C',
+            title: 'Start Tax-Saving Investments',
+            benefit: 'Reduce taxable income by up to ₹1.5 Lakhs',
+            maxDeduction: 150000,
+            applicable: true,
+            priority: 'high'
+        });
+    } else if (deductions.hasEPF && !deductions.hasPPF && !deductions.hasELSS) {
+        suggestions.push({
+            section: '80C',
+            title: 'Maximize 80C Beyond EPF',
+            benefit: 'If EPF doesn\'t fully cover ₹1.5L, consider PPF or ELSS',
+            maxDeduction: 150000,
+            applicable: true,
+            priority: 'medium'
+        });
+    }
+
+    // 80D - Health Insurance
+    if (!deductions.hasHealthInsurance) {
+        const maxDeduction = ageGroup === 'above_80' ? 100000 : (ageGroup === '60_to_80' ? 50000 : 25000);
+        suggestions.push({
+            section: '80D',
+            title: 'Get Health Insurance',
+            benefit: `Claim up to ₹${maxDeduction.toLocaleString()} for self (more if parents included)`,
+            maxDeduction,
+            applicable: true,
+            priority: 'high'
+        });
+    }
+
+    // NPS - 80CCD(1B)
+    if (!deductions.hasNPS) {
+        suggestions.push({
+            section: '80CCD(1B)',
+            title: 'Consider NPS Investment',
+            benefit: 'Additional ₹50,000 deduction beyond 80C limit',
+            maxDeduction: 50000,
+            applicable: true,
+            priority: 'medium'
+        });
+    }
+
+    // Home Loan - Section 24 (only if user already has one, NEVER suggest taking loan)
+    if (deductions.hasHomeLoan) {
+        suggestions.push({
+            section: 'Section 24',
+            title: 'Claim Home Loan Interest',
+            benefit: 'Deduction up to ₹2 Lakhs on home loan interest (self-occupied)',
+            maxDeduction: 200000,
+            applicable: true,
+            priority: 'high'
+        });
+    }
+
+    // Education Loan - 80E (only if user already has one)
+    if (deductions.hasEducationLoan) {
+        suggestions.push({
+            section: '80E',
+            title: 'Claim Education Loan Interest',
+            benefit: 'No upper limit on interest deduction for higher education loan',
+            maxDeduction: 0, // No limit
+            applicable: true,
+            priority: 'medium'
+        });
+    }
+
+    // =========================================================================
+    // D) DISCLAIMERS
+    // =========================================================================
+    const disclaimers = [
+        'This is guidance only, not official tax filing advice.',
+        'Actual tax liability depends on complete and accurate disclosures.',
+        'Estimates are based on general rules and may vary for your specific case.',
+        'Please consult a tax professional or verify on Income Tax e-Filing portal before filing.',
+        'Tax laws are subject to change. This is based on FY 2025-26 rules.'
+    ];
+
+    return {
+        itrForm,
+        regimeComparison: {
+            oldRegimeBenefits,
+            newRegimeBenefits,
+            recommendation: regimeRecommendation,
+            estimatedDifference: estimatedDifference || undefined,
+            isEstimate: true
+        },
+        suggestions,
+        disclaimers
+    };
+}
+
 // =============================================================================
 // EXPORTS
 // =============================================================================
 
 export const taxService = {
     addIncome,
+    updateDeductions,
     getEstimate,
     getRegime,
     getDeductions,
+    getITRRecommendation,
+    getTaxGuidance,
     getOrCreateProfile,
 };
 

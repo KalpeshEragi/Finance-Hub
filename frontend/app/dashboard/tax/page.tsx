@@ -9,15 +9,12 @@ import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Receipt,
-  FileText,
   AlertCircle,
   IndianRupee,
   Sparkles,
-  TrendingUp,
   ShieldCheck,
   ArrowRight,
   Loader2,
-  CheckCircle2,
   Plus,
   Info
 } from "lucide-react"
@@ -26,9 +23,7 @@ import {
   getTaxEstimate,
   getTaxDeductions,
   updateTaxIncome,
-  updateTaxDeductions,
   type TaxComparison,
-  type DeductionDetails,
   type IncomeInput
 } from "@/lib/api/tax"
 import { useToast } from "@/components/ui/use-toast"
@@ -40,7 +35,9 @@ import {
   SelectValue
 } from "@/components/ui/select"
 import { ITRFormSuggester } from "@/components/tax/itr-form-suggester"
+import { TaxPlannerWizard } from "@/components/tax/tax-planner-wizard"
 import { TaxDeadlines } from "@/components/tax/tax-deadlines"
+import { TaxSummaryChart } from "@/components/tax/tax-summary-chart"
 
 export default function TaxPage() {
   const [activeTab, setActiveTab] = useState("overview")
@@ -138,10 +135,22 @@ export default function TaxPage() {
             </p>
           </div>
         </div>
-        <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-400 w-fit">
-          <AlertCircle className="w-3 h-3 mr-1" />
-          FY 2025-26 (AY 2026-27)
-        </Badge>
+        <div className="flex flex-row-reverse sm:flex-row items-center gap-3 w-full sm:w-auto justify-between sm:justify-start">
+          <TaxPlannerWizard
+            trigger={
+              <Button className="bg-gradient-to-r from-primary to-blue-600 shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all font-semibold h-9">
+                <Sparkles className="w-4 h-4 mr-2" />
+                Plan My Taxes
+              </Button>
+            }
+            onComplete={() => fetchData()}
+          />
+
+          <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-400 w-fit shrink-0">
+            <AlertCircle className="w-3 h-3 mr-1" />
+            FY 2025-26
+          </Badge>
+        </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
@@ -156,78 +165,122 @@ export default function TaxPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-6">
               {/* Main Recommendation Card */}
-              <Card className="bg-gradient-to-br from-primary/10 to-blue-600/10 border-primary/20">
-                <CardContent className="p-8">
-                  <div className="flex flex-col md:flex-row gap-8 items-center">
-                    <div className="flex-1 space-y-4">
-                      <div className="flex items-center gap-2">
-                        <Sparkles className="w-5 h-5 text-amber-400" />
-                        <span className="text-sm font-medium uppercase tracking-wider text-primary">AI Recommendation</span>
+              {recommended?.grossIncome > 0 ? (
+                <Card className="bg-gradient-to-br from-primary/10 to-blue-600/10 border-primary/20">
+                  <CardContent className="p-8">
+                    <div className="flex flex-col md:flex-row gap-8 items-center">
+                      <div className="flex-1 space-y-4">
+                        <div className="flex items-center gap-2">
+                          <Sparkles className="w-5 h-5 text-amber-400" />
+                          <span className="text-sm font-medium uppercase tracking-wider text-primary">AI Recommendation</span>
+                        </div>
+                        <h2 className="text-3xl font-bold text-foreground">
+                          Switch to the <span className="text-primary capitalize">{comparison?.recommended} Regime</span>
+                        </h2>
+                        <p className="text-muted-foreground leading-relaxed">
+                          {comparison?.explanation}
+                        </p>
+                        <div className="flex items-center gap-6 pt-2">
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase mb-1">Estimated Tax</p>
+                            <p className="text-2xl font-bold text-foreground">₹{(recommended?.totalTax ?? 0).toLocaleString()}</p>
+                          </div>
+                          <div className="w-px h-10 bg-border" />
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase mb-1">Potential Savings</p>
+                            <p className="text-2xl font-bold text-emerald-400">₹{(comparison?.savings ?? 0).toLocaleString()}</p>
+                          </div>
+                        </div>
                       </div>
-                      <h2 className="text-3xl font-bold text-foreground">
-                        Switch to the <span className="text-primary capitalize">{comparison?.recommended} Regime</span>
-                      </h2>
-                      <p className="text-muted-foreground leading-relaxed">
-                        {comparison?.explanation}
+                      <div className="w-48 h-48 rounded-full border-8 border-primary/20 flex flex-col items-center justify-center bg-background/50 relative">
+                        <div className="absolute inset-0 rounded-full border-[12px] border-primary border-t-transparent animate-[spin_3s_linear_infinite]" />
+                        <span className="text-xs text-muted-foreground">Effective Rate</span>
+                        <span className="text-2xl font-bold">{recommended?.effectiveTaxRate ?? 0}%</span>
+                        <Badge variant="outline" className="mt-2 bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Optimal</Badge>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : (
+                <Card className="bg-gradient-to-br from-amber-500/10 to-orange-600/10 border-amber-500/20">
+                  <CardContent className="p-8 text-center">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-16 h-16 rounded-full bg-amber-500/10 flex items-center justify-center">
+                        <AlertCircle className="w-8 h-8 text-amber-500" />
+                      </div>
+                      <h2 className="text-2xl font-bold text-foreground">No Income Data Yet</h2>
+                      <p className="text-muted-foreground max-w-md">
+                        To get personalized tax recommendations, please add your income details or use the Tax Planner Wizard.
                       </p>
-                      <div className="flex items-center gap-6 pt-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase mb-1">Estimated Tax</p>
-                          <p className="text-2xl font-bold text-foreground">₹{(recommended?.totalTax ?? 0).toLocaleString()}</p>
-                        </div>
-                        <div className="w-px h-10 bg-border" />
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase mb-1">Potential Savings</p>
-                          <p className="text-2xl font-bold text-emerald-400">₹{(comparison?.savings ?? 0).toLocaleString()}</p>
-                        </div>
+                      <div className="flex gap-3 mt-2">
+                        <TaxPlannerWizard
+                          trigger={
+                            <Button className="bg-gradient-to-r from-primary to-blue-600">
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              Start Tax Planner
+                            </Button>
+                          }
+                          onComplete={() => fetchData()}
+                        />
+                        <Button variant="outline" onClick={() => setActiveTab('income')}>
+                          Enter Income Manually
+                        </Button>
                       </div>
                     </div>
-                    <div className="w-48 h-48 rounded-full border-8 border-primary/20 flex flex-col items-center justify-center bg-background/50 relative">
-                      <div className="absolute inset-0 rounded-full border-[12px] border-primary border-t-transparent animate-[spin_3s_linear_infinite]" />
-                      <span className="text-xs text-muted-foreground">Effective Rate</span>
-                      <span className="text-2xl font-bold">{recommended?.effectiveTaxRate}%</span>
-                      <Badge variant="outline" className="mt-2 bg-emerald-500/10 text-emerald-400 border-emerald-500/20">Optimal</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              )}
 
-              {/* Suggestions Header */}
-              <div className="flex items-center gap-2 mt-8 mb-4">
-                <h3 className="text-lg font-semibold">Optimization Tips</h3>
-                <Badge className="bg-primary/20 text-primary hover:bg-primary/30 border-none">
-                  {(deductionsData?.suggestions.length ?? 0)} New Tips
-                </Badge>
-              </div>
+              {/* Charts & Visual Analysis */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <TaxSummaryChart comparison={comparison} />
 
-              {/* Suggestions Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {(deductionsData?.suggestions ?? []).map((suggestion: any, idx: number) => (
-                  <Card key={idx} className="bg-card border-border overflow-hidden group hover:border-primary/50 transition-colors">
-                    <div className={cn(
-                      "h-1",
-                      suggestion.priority === 'high' ? "bg-red-400" : suggestion.priority === 'medium' ? "bg-amber-400" : "bg-blue-400"
-                    )} />
-                    <CardContent className="p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <Badge variant="outline" className="border-border font-normal text-xs">{suggestion.section}</Badge>
-                        <span className="text-xs text-emerald-400 font-medium">Save ~₹{(suggestion.potentialSavings ?? 0).toLocaleString()}</span>
+                {/* Comparison Card (Simplified) */}
+                <Card className="bg-card border-border flex flex-col">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Tax Regime Breakdown</CardTitle>
+                    <CardDescription>Detailed numbers comparison</CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex-1 space-y-4">
+                    <div className="space-y-4">
+                      <div className="p-3 rounded-lg border border-border bg-secondary/20 flex justify-between items-center">
+                        <div>
+                          <p className="text-sm font-medium">Old Regime Tax</p>
+                          <p className="text-xs text-muted-foreground w-[180px] break-words">Incl. deductions</p>
+                        </div>
+                        <p className="text-lg font-bold">₹{(comparison?.oldRegime.totalTax ?? 0).toLocaleString()}</p>
                       </div>
-                      <h4 className="font-semibold text-foreground mb-1">{suggestion.title}</h4>
-                      <p className="text-xs text-muted-foreground line-clamp-2 mb-4">{suggestion.description}</p>
-                      <Button variant="ghost" size="sm" className="w-full text-primary hover:text-primary hover:bg-primary/10 p-0 text-xs">
-                        Learn How <ArrowRight className="w-3 h-3 ml-1" />
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+                      <div className="p-3 rounded-lg border border-border bg-secondary/20 flex justify-between items-center">
+                        <div>
+                          <p className="text-sm font-medium">New Regime Tax</p>
+                          <p className="text-xs text-muted-foreground">Flat rates</p>
+                        </div>
+                        <p className="text-lg font-bold">₹{(comparison?.newRegime.totalTax ?? 0).toLocaleString()}</p>
+                      </div>
+                      <div className="mt-4 pt-4 border-t border-border">
+                        <div className="flex justify-between items-center">
+                          <span className="font-bold text-emerald-500">Net Savings</span>
+                          <span className="text-2xl font-black text-emerald-500">
+                            {(comparison?.savings ?? 0) > 0
+                              ? `₹${(comparison?.savings ?? 0).toLocaleString()}`
+                              : 'Enter income to calculate'}
+                          </span>
+                        </div>
+                        {(comparison?.savings ?? 0) > 0 && (
+                          <p className="text-xs text-right text-muted-foreground mt-1">by choosing {comparison?.recommended} regime</p>
+                        )}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
+
             </div>
 
             {/* Sidebar */}
             <div className="space-y-6">
               <ITRFormSuggester income={comparison.oldRegime.grossIncome && deductionsData?.claimed ? {
-                salary: comparison.oldRegime.grossIncome, // Simplified mapping
+                salary: comparison.oldRegime.grossIncome,
                 rental: 0,
                 business: 0,
                 capitalGains: { shortTerm: 0, longTerm: 0 },
@@ -344,14 +397,31 @@ export default function TaxPage() {
               <CardContent>
                 <div className="space-y-5">
                   {deductionsData && Object.entries(deductionsData.claimed).map(([key, value]: any) => {
+                    // Skip 0 values unless it's a major section
                     if (value === 0 && key !== 'section80C' && key !== 'section80D') return null;
+
                     const limit = deductionsData.limits[key] || 0;
                     const percentage = limit > 0 ? (value / limit) * 100 : 0;
+
+                    const formatLabel = (k: string) => {
+                      const labels: Record<string, string> = {
+                        section80C: "Section 80C (Investments)",
+                        section80D: "Section 80D (Health Insurance)",
+                        section80G: "Donations (80G)",
+                        homeLoanInterest: "Home Loan Interest",
+                        standardDeduction: "Standard Deduction",
+                        professionalTax: "Professional Tax",
+                        nps: "NPS (80CCD)",
+                        hra: "HRA Exemption",
+                        lta: "LTA"
+                      };
+                      return labels[k] || k.replace(/([A-Z])/g, ' $1').trim();
+                    };
 
                     return (
                       <div key={key} className="space-y-2">
                         <div className="flex justify-between items-center text-sm">
-                          <span className="font-medium text-foreground">{key.replace('section', 'Section ')}</span>
+                          <span className="font-medium text-foreground">{formatLabel(key)}</span>
                           <span className="text-muted-foreground">₹{(value ?? 0).toLocaleString()} / ₹{(limit ?? 0).toLocaleString()}</span>
                         </div>
                         <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
@@ -365,7 +435,9 @@ export default function TaxPage() {
                   })}
                   <div className="pt-4 border-t border-border flex justify-between items-center">
                     <span className="text-sm font-bold">Total Deductions</span>
-                    <span className="text-lg font-extrabold text-primary">₹{(recommended?.totalDeductions ?? 0).toLocaleString()}</span>
+                    <span className="text-lg font-extrabold text-primary">₹{(
+                      deductionsData ? Object.values(deductionsData.claimed).reduce((a: number, b: unknown) => a + (Number(b) || 0), 0) : 0
+                    ).toLocaleString()}</span>
                   </div>
                 </div>
               </CardContent>
@@ -475,8 +547,8 @@ export default function TaxPage() {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+        </TabsContent >
+      </Tabs >
+    </div >
   )
 }
