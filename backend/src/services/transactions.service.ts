@@ -141,8 +141,9 @@ interface StatementImportPayload {
  * 
  * This function:
  * 1. Receives normalized transactions from AI Engine
- * 2. Auto-categorizes using AI Engine /categorize endpoint
- * 3. Saves transactions with categories to database
+ * 2. Validates and normalizes each transaction
+ * 3. Auto-categorizes using AI Engine /categorize endpoint
+ * 4. Saves transactions with categories to database
  * 
  * @param userId - User ID
  * @param payload - Parsed statement from AI Engine
@@ -168,16 +169,102 @@ export async function importStatementTransactions(
         return results;
     }
 
-    // Prepare transactions for categorization
-    const transactionsToCateg = payload.transactions.map((t, idx) => ({
-        id: `temp_${idx}`,
-        description: t.description || '',
-        merchant: '',  // Extract from description if possible
+    // ==========================================================
+    // STEP 1: Validate and normalize all transactions first
+    // ==========================================================
+    const validatedTransactions: Array<{
+        index: number;
+        date: Date;
+        description: string;
+        amount: number;
+        type: 'income' | 'expense';
+    }> = [];
+
+    for (let i = 0; i < payload.transactions.length; i++) {
+        const txn = payload.transactions[i];
+
+        if (!txn) {
+            results.failed++;
+            results.errors.push({ row: i + 1, error: 'Empty transaction data' });
+            continue;
+        }
+
+        // Validate and normalize date
+        let parsedDate: Date;
+        if (txn.date && typeof txn.date === 'string' && txn.date.trim() !== '') {
+            parsedDate = new Date(txn.date);
+            // Check if date is valid
+            if (isNaN(parsedDate.getTime())) {
+                // Try parsing as DD/MM/YYYY format
+                const parts = txn.date.split(/[\/\-]/);
+                if (parts.length === 3) {
+                    // Assume DD/MM/YYYY or DD-MM-YYYY
+                    const [day, month, year] = parts;
+                    parsedDate = new Date(
+                        parseInt(year.length === 2 ? `20${year}` : year),
+                        parseInt(month) - 1,
+                        parseInt(day)
+                    );
+                }
+                // If still invalid, use current date
+                if (isNaN(parsedDate.getTime())) {
+                    parsedDate = new Date();
+                }
+            }
+        } else {
+            parsedDate = new Date();
+        }
+
+        // Validate and normalize amount
+        let amount: number;
+        if (typeof txn.amount === 'number' && !isNaN(txn.amount) && txn.amount > 0) {
+            amount = Math.abs(txn.amount);
+        } else if (typeof txn.amount === 'string') {
+            // Try to parse string amount
+            const cleaned = txn.amount.toString().replace(/[₹,\s]/g, '');
+            amount = parseFloat(cleaned);
+            if (isNaN(amount) || amount <= 0) {
+                results.failed++;
+                results.errors.push({ row: i + 1, error: `Invalid amount: ${txn.amount}` });
+                continue;
+            }
+        } else {
+            results.failed++;
+            results.errors.push({ row: i + 1, error: `Missing or invalid amount` });
+            continue;
+        }
+
+        // Validate type
+        if (txn.type !== 'income' && txn.type !== 'expense') {
+            results.failed++;
+            results.errors.push({ row: i + 1, error: `Invalid type: ${txn.type}` });
+            continue;
+        }
+
+        validatedTransactions.push({
+            index: i,
+            date: parsedDate,
+            description: txn.description || '',
+            amount: amount,
+            type: txn.type,
+        });
+    }
+
+    if (validatedTransactions.length === 0) {
+        return results;
+    }
+
+    // ==========================================================
+    // STEP 2: Categorize via AI Engine
+    // ==========================================================
+    const transactionsToCateg = validatedTransactions.map(t => ({
+        id: `temp_${t.index}`,
+        description: t.description,
+        merchant: '',
         amount: t.amount,
         type: t.type,
     }));
 
-    // Call AI Engine for categorization
     let categorizations: Record<string, string> = {};
     try {
         const categResult = await aiClient.categorize(transactionsToCateg);
@@ -189,38 +276,32 @@ export async function importStatementTransactions(
         }
     } catch (error) {
         console.error('AI categorization failed, using defaults:', error);
-        // Continue without categorization
     }
 
-    // Save each transaction to database
-    for (let i = 0; i < payload.transactions.length; i++) {
-        const txn = payload.transactions[i];
-
+    // ==========================================================
+    // STEP 3: Save to database
+    // ==========================================================
+    for (const txn of validatedTransactions) {
         try {
-            if (!txn) {
-                throw new Error('Empty transaction data');
-            }
-
-            // Get category from AI Engine result or default
-            const category = categorizations[`temp_${i}`] || 'Uncategorized';
+            const category = categorizations[`temp_${txn.index}`] || 'Uncategorized';
 
             await Transaction.create({
                 userId: new mongoose.Types.ObjectId(userId),
                 amount: txn.amount,
                 type: txn.type,
                 category: category,
-                description: txn.description || '',
-                date: txn.date ? new Date(txn.date) : new Date(),
-                merchant: '',  // Could extract from description
-                isAutoCategorized: !!categorizations[`temp_${i}`],
+                description: txn.description,
+                date: txn.date,
+                merchant: '',
+                isAutoCategorized: !!categorizations[`temp_${txn.index}`],
             });
 
             results.created++;
         } catch (error) {
             results.failed++;
             results.errors.push({
-                row: i + 1,
-                error: error instanceof Error ? error.message : 'Unknown error',
+                row: txn.index + 1,
+                error: error instanceof Error ? error.message : 'Database error',
             });
         }
     }
