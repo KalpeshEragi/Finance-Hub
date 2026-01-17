@@ -112,11 +112,15 @@ export default function DashboardPage() {
 
       try {
         const response = await getTransactions({ limit: 100 })
-        setTransactions(response.data)
-        processTransactions(response.data)
+        const data = response?.data ?? []
+        setTransactions(data)
+        processTransactions(data)
       } catch {
-        // If auth fails, redirect
-        router.push('/auth/login')
+        // Reset to safe defaults on error
+        setTransactions([])
+        setTotals({ income: 0, expense: 0 })
+        setCategoryData([])
+        setMonthlyData([])
       } finally {
         setIsLoading(false)
       }

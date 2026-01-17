@@ -62,9 +62,11 @@ export default function GoalsPage() {
   const fetchGoals = useCallback(async () => {
     setIsLoading(true)
     try {
-      const { data } = await getGoals()
+      const response = await getGoals()
+      const data = response?.data ?? []
       setGoals(data.map(mapBackendGoal))
     } catch (error) {
+      setGoals([])
       toast({
         variant: "destructive",
         title: "Error",

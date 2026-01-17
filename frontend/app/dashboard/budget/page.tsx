@@ -72,11 +72,16 @@ export default function BudgetPage() {
     const fetchSummary = useCallback(async () => {
         setIsLoading(true)
         try {
-            const { data } = await getBudgetSummary(month, year)
-            setBudgets(data.budgets)
-            setTotalBudget(data.totalBudget)
-            setTotalSpent(data.totalSpent)
+            const response = await getBudgetSummary(month, year)
+            const data = response?.data
+            setBudgets(data?.budgets ?? [])
+            setTotalBudget(data?.totalBudget ?? 0)
+            setTotalSpent(data?.totalSpent ?? 0)
         } catch (error) {
+            // Reset to safe defaults on error
+            setBudgets([])
+            setTotalBudget(0)
+            setTotalSpent(0)
             toast({
                 variant: "destructive",
                 title: "Error",
@@ -173,7 +178,7 @@ export default function BudgetPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-baseline gap-2">
-                                    <h3 className="text-2xl font-bold text-foreground">₹{totalBudget.toLocaleString()}</h3>
+                                    <h3 className="text-2xl font-bold text-foreground">₹{totalBudget?.toLocaleString() ?? "0"}</h3>
                                 </div>
                             </CardContent>
                         </Card>
@@ -187,7 +192,7 @@ export default function BudgetPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-baseline gap-2">
-                                    <h3 className="text-2xl font-bold text-foreground">₹{totalSpent.toLocaleString()}</h3>
+                                    <h3 className="text-2xl font-bold text-foreground">₹{totalSpent?.toLocaleString() ?? "0"}</h3>
                                     <span className={cn("text-xs", overallPercentage > 90 ? "text-red-400" : "text-emerald-400")}>
                                         {overallPercentage.toFixed(1)}% used
                                     </span>
@@ -204,7 +209,7 @@ export default function BudgetPage() {
                                     </div>
                                 </div>
                                 <div className="flex items-baseline gap-2">
-                                    <h3 className="text-2xl font-bold text-foreground">₹{remainingTotal.toLocaleString()}</h3>
+                                    <h3 className="text-2xl font-bold text-foreground">₹{remainingTotal?.toLocaleString() ?? "0"}</h3>
                                 </div>
                             </CardContent>
                         </Card>
@@ -224,8 +229,8 @@ export default function BudgetPage() {
                             </div>
                             <Progress value={Math.min(overallPercentage, 100)} className="h-3 bg-secondary" />
                             <div className="flex justify-between mt-3 text-sm text-muted-foreground">
-                                <span>Spent ₹{totalSpent.toLocaleString()}</span>
-                                <span>Budget ₹{totalBudget.toLocaleString()}</span>
+                                <span>Spent ₹{totalSpent?.toLocaleString() ?? "0"}</span>
+                                <span>Budget ₹{totalBudget?.toLocaleString() ?? "0"}</span>
                             </div>
                         </CardContent>
                     </Card>

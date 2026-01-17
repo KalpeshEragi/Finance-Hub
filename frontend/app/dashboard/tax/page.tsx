@@ -62,9 +62,11 @@ export default function TaxPage() {
         getTaxEstimate(),
         getTaxDeductions()
       ])
-      setComparison(estRes.data)
-      setDeductionsData(dedRes.data)
+      setComparison(estRes?.data ?? null)
+      setDeductionsData(dedRes?.data ?? null)
     } catch (error) {
+      setComparison(null)
+      setDeductionsData(null)
       toast({
         variant: "destructive",
         title: "Error",

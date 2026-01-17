@@ -30,11 +30,23 @@ export default function InvestmentsPage() {
     setIsLoading(true)
     try {
       const result = await getInvestments()
-      if (result.success) {
-        setHoldings(result.data.holdings)
-        setSummary(result.data.summary)
+      if (result?.success && result?.data) {
+        setHoldings(result.data.holdings ?? [])
+        setSummary(result.data.summary ?? {
+          totalInvested: 0,
+          currentValue: 0,
+          totalReturns: 0,
+          returnsPercentage: 0
+        })
       }
     } catch (error: any) {
+      setHoldings([])
+      setSummary({
+        totalInvested: 0,
+        currentValue: 0,
+        totalReturns: 0,
+        returnsPercentage: 0
+      })
       toast({
         title: "Error fetching investments",
         description: error.message || "Something went wrong",
