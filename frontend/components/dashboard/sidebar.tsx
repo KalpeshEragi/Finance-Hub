@@ -42,11 +42,7 @@ const creditCards = [
   { name: "ICICI Rewards", last4: "1994", balance: "₹41,994", color: "bg-emerald-500" },
 ]
 
-const bottomNavItems = [
-  { icon: Compass, label: "Explore", href: "/dashboard/explore" },
-  { icon: HelpCircle, label: "Get help", href: "/dashboard/help" },
-  { icon: Settings, label: "Settings", href: "/dashboard/settings" },
-]
+const bottomNavItems: { icon: any; label: string; href: string }[] = []
 
 interface SidebarProps {
   user?: {
@@ -115,18 +111,20 @@ export function Sidebar({ user }: SidebarProps) {
         </div>
       </nav>
 
-      <div className="p-3 border-t border-sidebar-border space-y-1">
-        {bottomNavItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
-          >
-            <item.icon className="w-4 h-4" />
-            {item.label}
-          </Link>
-        ))}
-      </div>
+      {bottomNavItems.length > 0 && (
+        <div className="p-3 border-t border-sidebar-border space-y-1">
+          {bottomNavItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+            >
+              <item.icon className="w-4 h-4" />
+              {item.label}
+            </Link>
+          ))}
+        </div>
+      )}
     </aside>
   )
 }
