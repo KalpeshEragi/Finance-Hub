@@ -65,6 +65,7 @@ export default function BudgetPage() {
 
     // Form state
     const [selectedCategory, setSelectedCategory] = useState('')
+    const [customCategoryName, setCustomCategoryName] = useState('')
     const [limit, setLimit] = useState('')
     const [month, setMonth] = useState(new Date().getMonth() + 1)
     const [year, setYear] = useState(new Date().getFullYear())
@@ -99,11 +100,14 @@ export default function BudgetPage() {
     const handleSetBudget = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!selectedCategory || !limit) return
+        if (selectedCategory === 'Other' && !customCategoryName.trim()) return
+
+        const categoryName = selectedCategory === 'Other' ? customCategoryName.trim() : selectedCategory
 
         setIsSaving(true)
         try {
             await setBudget({
-                category: selectedCategory,
+                category: categoryName,
                 limit: parseFloat(limit),
                 month,
                 year,
@@ -111,11 +115,12 @@ export default function BudgetPage() {
 
             toast({
                 title: "Success",
-                description: `Budget set for ${selectedCategory}`,
+                description: `Budget set for ${categoryName}`,
             })
 
             setIsDialogOpen(false)
             setSelectedCategory('')
+            setCustomCategoryName('')
             setLimit('')
             fetchSummary()
         } catch (error) {
@@ -318,6 +323,19 @@ export default function BudgetPage() {
                                 </SelectContent>
                             </Select>
                         </div>
+                        {selectedCategory === 'Other' && (
+                            <div className="space-y-2">
+                                <Label htmlFor="customName">Category Name</Label>
+                                <Input
+                                    id="customName"
+                                    type="text"
+                                    placeholder="Enter custom category name"
+                                    value={customCategoryName}
+                                    onChange={(e) => setCustomCategoryName(e.target.value)}
+                                    className="bg-secondary border-border text-foreground"
+                                />
+                            </div>
+                        )}
                         <div className="space-y-2">
                             <Label htmlFor="limit">Monthly Limit (₹)</Label>
                             <Input
@@ -333,7 +351,7 @@ export default function BudgetPage() {
                             <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)} className="border-border">
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={isSaving || !selectedCategory || !limit} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                            <Button type="submit" disabled={isSaving || !selectedCategory || !limit || (selectedCategory === 'Other' && !customCategoryName.trim())} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                                 {isSaving ? (
                                     <>
                                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />

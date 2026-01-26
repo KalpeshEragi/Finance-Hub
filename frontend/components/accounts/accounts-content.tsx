@@ -1098,7 +1098,7 @@ export function AccountsContent({ user }: AccountsContentProps) {
             </div>
 
             {/* Recent Referrals */}
-            <div className="space-y-2 max-h-[200px] overflow-y-auto">
+            <div className="space-y-2 max-h-[350px] overflow-y-auto">
               <p className="text-xs font-medium text-muted-foreground uppercase">Recent Referrals</p>
 
               <div className="p-2.5 rounded-lg bg-secondary/50 border border-border">

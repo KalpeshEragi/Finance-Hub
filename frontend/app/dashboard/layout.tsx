@@ -1,10 +1,12 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Sidebar } from "@/components/dashboard/sidebar"
 import { getMeApi } from "@/lib/auth/api"
+import { Toaster } from "@/components/ui/sonner"
+import { NotificationProvider, useNotifications } from "@/lib/context/notification-context"
 
 // Cookie utility
 function getCookie(name: string): string | null {
@@ -18,11 +20,41 @@ function getCookie(name: string): string | null {
   return null;
 }
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+// Component that triggers notifications
+function NotificationTrigger() {
+  const { notificationsEnabled, triggerNotification } = useNotifications()
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  useEffect(() => {
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+    }
+
+    if (notificationsEnabled) {
+      // Trigger first notification after 10 seconds
+      const timeout = setTimeout(() => {
+        triggerNotification()
+
+        // Then trigger every 30 seconds
+        intervalRef.current = setInterval(() => {
+          triggerNotification()
+        }, 30000)
+      }, 10000)
+
+      return () => {
+        clearTimeout(timeout)
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current)
+        }
+      }
+    }
+  }, [notificationsEnabled, triggerNotification])
+
+  return null
+}
+
+function DashboardContent({ children }: { children: React.ReactNode }) {
   const [userInfo, setUserInfo] = useState<{
     email?: string;
     fullName?: string;
@@ -71,6 +103,20 @@ export default function DashboardLayout({
     <div className="flex min-h-screen bg-background">
       <Sidebar user={userInfo} />
       <main className="flex-1 p-6">{children}</main>
+      <NotificationTrigger />
     </div>
+  )
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <NotificationProvider>
+      <DashboardContent>{children}</DashboardContent>
+      <Toaster position="bottom-right" richColors />
+    </NotificationProvider>
   )
 }

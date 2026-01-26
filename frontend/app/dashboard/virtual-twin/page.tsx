@@ -369,7 +369,7 @@ export default function VirtualTwinPage() {
                                                     {Object.entries(scenarioOptions).map(([key, description]) => (
                                                         <SelectItem key={key} value={key}>
                                                             {key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                                        </SelectItem>
+                                             =           </SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
