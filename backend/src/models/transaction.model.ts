@@ -125,6 +125,60 @@ const transactionSchema = new Schema<ITransaction, TransactionModel>(
             type: Boolean,
             default: false,
         },
+
+        // =====================================================================
+        // UNIFIED ARCHITECTURE: Foreign Key Links
+        // =====================================================================
+
+        /**
+         * Reference to the payment method (bank account) used.
+         * Links transactions to specific accounts for accurate balances.
+         */
+        accountId: {
+            type: Schema.Types.ObjectId,
+            ref: 'PaymentMethod',
+            index: true,
+        },
+
+        /**
+         * Reference to a savings goal.
+         * Set when transaction is a contribution towards a goal.
+         */
+        goalId: {
+            type: Schema.Types.ObjectId,
+            ref: 'Goal',
+            index: true,
+        },
+
+        /**
+         * Reference to an investment holding.
+         * Set when transaction is a purchase/sale of an investment.
+         */
+        investmentId: {
+            type: Schema.Types.ObjectId,
+            ref: 'InvestmentHolding',
+            index: true,
+        },
+
+        /**
+         * Reference to a recurring subscription.
+         * Set when transaction matches a known subscription pattern.
+         */
+        recurringId: {
+            type: Schema.Types.ObjectId,
+            ref: 'RecurringSubscription',
+            index: true,
+        },
+
+        /**
+         * Tax section tag for tax-deductible transactions.
+         * Valid values: '80C', '80D', '80E', '80G', 'HRA', 'NPS', etc.
+         */
+        taxSection: {
+            type: String,
+            trim: true,
+            index: true,
+        },
     },
     {
         /**

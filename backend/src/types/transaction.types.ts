@@ -57,6 +57,25 @@ export interface ITransactionBase {
 
     /** Whether this was auto-categorized by AI */
     isAutoCategorized?: boolean;
+
+    // =========================================================================
+    // UNIFIED ARCHITECTURE: Foreign Key Links
+    // =========================================================================
+
+    /** Link to PaymentMethod (Bank Account) - Source/Destination of funds */
+    accountId?: Types.ObjectId;
+
+    /** Link to Goal - For savings/goal contributions */
+    goalId?: Types.ObjectId;
+
+    /** Link to InvestmentHolding - For investment purchases/sales */
+    investmentId?: Types.ObjectId;
+
+    /** Link to RecurringSubscription - For recurring payments */
+    recurringId?: Types.ObjectId;
+
+    /** Tax section tag (e.g., '80C', '80D') for tax-saving instruments */
+    taxSection?: string;
 }
 
 /**
