@@ -140,6 +140,10 @@ export async function getGoalById(userId: string, goalId: string): Promise<GoalP
  * @function updateGoal
  * @description Updates an existing goal.
  * 
+ * UNIFIED ARCHITECTURE: When currentAmount increases, we create a Transaction
+ * record linked to this goal. This ensures all financial movements are tracked
+ * in the single source of truth (Transaction ledger).
+ * 
  * @param userId - User ID
  * @param goalId - Goal ID
  * @param input - Fields to update
@@ -168,7 +172,28 @@ export async function updateGoal(
     // Handle currentAmount update with completion check
     if (input.currentAmount !== undefined) {
         const previousAmount = goal.currentAmount;
+        const contributionAmount = input.currentAmount - previousAmount;
         goal.currentAmount = input.currentAmount;
+
+        // =================================================================
+        // UNIFIED ARCHITECTURE: Create Transaction for Goal Contribution
+        // =================================================================
+        if (contributionAmount > 0) {
+            // Import Transaction model dynamically to avoid circular dependency
+            const Transaction = (await import('../models/transaction.model')).default;
+
+            await Transaction.create({
+                userId: new mongoose.Types.ObjectId(userId),
+                amount: contributionAmount,
+                type: 'expense', // Money leaving the user's available balance
+                category: 'Savings',
+                description: `Contribution to goal: ${goal.title}`,
+                merchant: 'Goal Savings',
+                date: new Date(),
+                goalId: goal._id, // Link to the goal
+                isAutoCategorized: true,
+            });
+        }
 
         // Check if goal is now completed
         if (goal.currentAmount >= goal.targetAmount && goal.status === GOAL_STATUS.ACTIVE) {

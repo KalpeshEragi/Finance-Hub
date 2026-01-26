@@ -1,0 +1,145 @@
+===========================================
+DEMO SMS MESSAGES FOR TESTING
+Finance Hub - Transaction & EMI Detection
+===========================================
+
+SALARY CREDITS
+-----------------
+1. HDFC Bank: Rs.85,000.00 credited to A/c XX1234 on 01-Jan-26. Salary from ABC CORP. Avl Bal: Rs.1,25,450.00
+
+2. SBI: Your account XX5678 has been credited with Rs.75,500.00 on 01-JAN-26 from EMPLOYER-SALARY. Available Balance: Rs.98,234.50
+
+3. ICICI Bank: Rs 92,000 credited to your Account XX9012 on 28-Dec-25 (Salary-XYZ Ltd). Avl bal Rs 1,15,678.25
+
+
+HOME LOAN EMI
+-----------------
+4. HDFC HOME LOANS: Rs.45,000.00 debited from A/c XX1234 towards Home Loan EMI for Jan 2026. Prin: Rs.28,450 Int: Rs.16,550. O/s: Rs.45,67,890
+
+5. SBI: EMI of Rs.38,500 debited from A/c XX5678 on 05-Jan-26 for Home Loan A/c HL123456. Principal: Rs.24,200 Interest: Rs.14,300
+
+6. ICICI Bank: Rs 52,000 debited for Home Loan EMI from XX9012 on 07-Jan-26. Outstanding: Rs 62,45,000
+
+
+EDUCATION LOAN EMI
+-----------------
+7. SBI EDUCATION LOAN: Rs.12,500 debited from A/c XX5678 on 10-Jan-26 towards Education Loan EMI. Loan A/c: EL789012
+
+8. HDFC: Education Loan EMI Rs.8,750 debited from XX1234 on 15-Jan-26. Principal Rs.5,200, Interest Rs.3,550
+
+
+CAR LOAN EMI
+-----------------
+9. HDFC BANK: Auto Loan EMI of Rs.18,500 debited from A/c XX1234 on 08-Jan-26. Loan A/c AL456789
+
+10. ICICI Bank: Vehicle Loan EMI Rs 22,300 debited from XX9012 on 12-Jan-26. Outstanding: Rs 4,56,780
+
+
+PERSONAL LOAN EMI
+-----------------
+11. SBI: Personal Loan EMI Rs.15,000 debited from A/c XX5678 on 05-Jan-26. Loan A/c: PL345678
+
+12. HDFC BANK: Rs.25,000 debited towards Personal Loan EMI from XX1234 on 20-Jan-26
+
+
+UPI PAYMENTS
+-----------------
+13. You have spent Rs.2,450.00 on 15-Jan-26 via UPI to SWIGGY-BANGALORE. A/c XX1234. Avl Bal Rs.87,650.00
+
+14. Rs 850 paid to UBER from A/c XX5678 via UPI on 16-Jan-26. Avl bal: Rs 45,230
+
+15. UPI payment of Rs.1,250 to AMAZON PAY from XX9012 on 17-Jan-26. Balance: Rs.98,450
+
+16. Rs 3,500 paid via UPI to APOLLO PHARMACY on 14-Jan-26 from XX1234
+
+
+CREDIT CARD PAYMENTS
+-----------------
+17. HDFC BANK CC: Rs.8,500 spent at RELIANCE DIGITAL on 12-Jan-26. Avl limit Rs.1,25,000. CC XX7890
+
+18. ICICI Credit Card XX3456 used for Rs.2,340 at HOTEL TAJ BANGALORE on 10-Jan-26
+
+19. SBI Card: Transaction of Rs.12,450 at CROMA-MUMBAI on 15-Jan-26. Card XX6789
+
+
+CREDIT CARD BILL PAYMENTS
+-----------------
+20. HDFC Bank: Credit Card bill of Rs.45,670 due on 05-Feb-26. Min due Rs.4,567. Card XX7890
+
+21. ICICI CC: Your credit card bill Rs.38,900 is due on 10-Feb-26. Pay now to avoid late fees. Card XX3456
+
+22. SBI Card: Total outstanding Rs.52,340. Due date: 15-Feb-26. Min payment: Rs.5,234
+
+
+UTILITY PAYMENTS
+-----------------
+23. Rs.2,340 debited from A/c XX1234 towards BSNL BROADBAND bill payment on 18-Jan-26
+
+24. Electricity Bill Payment: Rs.3,560 debited from XX5678 to BESCOM on 20-Jan-26
+
+25. Rs 1,200 paid for Jio Mobile Recharge from XX9012 on 16-Jan-26
+
+
+INVESTMENT/SIP
+-----------------
+26. HDFC MF: SIP of Rs.10,000 debited from A/c XX1234 on 05-Jan-26 for HDFC Equity Fund
+
+27. SBI Mutual Fund: Rs.5,000 invested in SBI Bluechip Fund via SIP on 01-Jan-26 from XX5678
+
+28. ICICI Prudential: Rs.15,000 SIP debited on 10-Jan-26 for ICICI Focused Equity Fund from XX9012
+
+
+INSURANCE PREMIUM
+-----------------
+29. HDFC LIFE: Premium Rs.12,500 debited from XX1234 on 25-Jan-26 for Policy LA123456
+
+30. LIC: Premium payment of Rs.8,900 deducted from A/c XX5678 on 15-Jan-26. Policy 789012345
+
+31. ICICI Lombard: Health Insurance premium Rs.18,450 debited from XX9012 on 20-Jan-26
+
+
+RECURRING SUBSCRIPTIONS
+-----------------
+32. Netflix: Rs.649 debited from XX1234 on 12-Jan-26. Subscription renewed
+
+33. Amazon Prime: Rs.1,499 annual subscription charged to XX5678 on 18-Jan-26
+
+34. Spotify Premium: Rs.119 debited from XX9012 on 22-Jan-26
+
+
+ATM WITHDRAWALS
+-----------------
+35. ATM Cash Withdrawal: Rs.10,000 withdrawn from A/c XX1234 at ICICI ATM on 16-Jan-26. Avl Bal: Rs.75,450
+
+36. SBI ATM: Rs.5,000 cash withdrawn from XX5678 on 18-Jan-26. Balance: Rs.52,340
+
+
+GROCERY/SHOPPING
+-----------------
+37. Rs.4,560 spent at DMART BANGALORE using Debit Card XX1234 on 14-Jan-26
+
+38. Purchase of Rs.2,340 at MORE MEGASTORE from A/c XX5678 on 19-Jan-26
+
+39. Rs 6,780 debited for purchase at BIG BAZAAR PUNE from XX9012 on 21-Jan-26
+
+
+FUEL PAYMENTS
+-----------------
+40. Rs.3,500 spent at INDIAN OIL PETROL PUMP using Card XX1234 on 15-Jan-26
+
+41. Fuel purchase: Rs.2,800 debited from XX5678 at HP PETROL PUMP on 20-Jan-26
+
+
+USAGE TIPS
+-----------------
+- Use these SMS for testing EMI detection algorithms
+- Salary SMS can help identify monthly income
+- Loan EMI patterns should be detected for tax deductions (80C, 80EE, etc.)
+- UPI and card transactions for expense tracking
+- SIP/Insurance for investment tracking and 80C deductions
+- Each message follows authentic Indian bank SMS formats
+- Account numbers are masked (XX format) as per real SMS
+- Dates are in DD-Mon-YY format commonly used by banks
+- Amounts use both formats: Rs.10,000.00 and Rs 10,000
+
+===========================================

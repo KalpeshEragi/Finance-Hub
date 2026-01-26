@@ -37,7 +37,7 @@ import {
     FileText,
 } from "lucide-react"
 import { importTransactions, type TransactionInput } from "@/lib/api/transactions"
-import { addBankAccount } from "@/lib/api/paymentMethods"
+import { addBankAccount, type BankAccount } from "@/lib/api/paymentMethods"
 
 const BANKS = [
     { id: 'sbi', name: 'State Bank of India', logo: '🏦', color: 'bg-blue-500' },
@@ -147,7 +147,7 @@ export default function ConnectBankPage() {
                 bankName: selectedBankData?.name || 'Bank Account',
                 accountNumber: bankDetails.accountNumber,
                 ifscCode: bankDetails.ifscCode.toUpperCase(),
-                accountType: bankDetails.accountType,
+                accountType: bankDetails.accountType as any,
                 accountHolderName: bankDetails.accountHolderName,
                 isPrimary: false,
             })

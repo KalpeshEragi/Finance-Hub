@@ -42,7 +42,9 @@ const creditCards = [
   { name: "ICICI Rewards", last4: "1994", balance: "₹41,994", color: "bg-emerald-500" },
 ]
 
-const bottomNavItems: { icon: any; label: string; href: string }[] = []
+const bottomNavItems = [
+  { icon: Compass, label: "Explore", href: "/dashboard/explore" },
+]
 
 interface SidebarProps {
   user?: {
