@@ -36,6 +36,7 @@ export interface LoanDetail {
     outstandingAmount: number;
     interestRate: number;
     emiAmount: number;
+    monthlyInterestBurn: number; // Outstanding × (Rate/12) - actual money lost per month
     priority: number; // 1 = highest priority (pay first)
     monthsRemaining: number;
     totalInterestIfContinued: number;
@@ -79,12 +80,72 @@ export interface FinancialSnapshot {
     consistentSavingsMonths: number; // How many months user has been saving consistently
 }
 
+// =============================================================================
+// PERSONALIZED ADVICE UI BLOCKS (Human-friendly output)
+// =============================================================================
+
+export interface DebtStrategyBlock {
+    headline: string;
+    subheadline: string;
+    steps: {
+        stepNumber: number;
+        loanName: string;
+        interestRate: number;
+        action: string;
+        reason: string;
+        amount?: number;
+    }[];
+    encouragement: string;
+}
+
+export interface ComparisonBlock {
+    headline: string;
+    doNothing: {
+        title: string;
+        totalInterestPaid: number;
+        monthsToDebtFree: number;
+        emotionalNote: string;
+    };
+    followPlan: {
+        title: string;
+        totalInterestPaid: number;
+        monthsToDebtFree: number;
+        interestSaved: number;
+        monthsSaved: number;
+        emotionalNote: string;
+    };
+    verdict: string;
+}
+
+export interface SafeMoneyBlock {
+    headline: string;
+    totalIdleCash: number;
+    emergencyFundRequired: number;
+    emergencyFundStatus: string;
+    safeToUse: number;
+    recommendation: string;
+    warningNote?: string;
+    actionButton: {
+        text: string;
+        amount: number;
+        targetLoan?: string;
+    } | null;
+}
+
+export interface PersonalizedAdvice {
+    debtStrategy: DebtStrategyBlock;
+    comparison: ComparisonBlock;
+    safeMoney: SafeMoneyBlock;
+    coachNote: string; // A warm, personal closing message
+}
+
 export interface SmartLoanAdviceResponse {
     snapshot: FinancialSnapshot;
     monthlySavingsHistory: MonthlySavingsData[];
     loans: LoanDetail[];
     repaymentPlan: RepaymentPlan[];
     recommendations: LoanRecommendation[];
+    personalizedAdvice: PersonalizedAdvice; // NEW: Human-friendly UI blocks
     summary: {
         totalIdleSavings: number;
         totalPotentialInterestSaved: number;
@@ -218,14 +279,28 @@ async function getFinancialSnapshot(
 }
 
 function analyzeLoansPriority(loans: ILoan[]): LoanDetail[] {
-    // Sort by interest rate (highest first) for debt avalanche
-    const sorted = [...loans].sort((a, b) => b.interestRate - a.interestRate);
+    // ==========================================================================
+    // Interest-Cost Weighted Debt Avalanche
+    // ==========================================================================
+    // Sort by Monthly Interest Burn (highest first) - not just interest rate!
+    // Monthly Interest Burn = Outstanding Amount × (Interest Rate / 12 / 100)
+    // This ensures we attack the loan costing the MOST MONEY each month,
+    // not just the one with highest percentage.
+    // ==========================================================================
+    const sorted = [...loans].sort((a, b) => {
+        const burnA = a.outstandingAmount * (a.interestRate / 12 / 100);
+        const burnB = b.outstandingAmount * (b.interestRate / 12 / 100);
+        return burnB - burnA; // Highest burn first
+    });
 
     return sorted.map((loan, index) => {
         const monthsRemaining = Math.ceil(loan.outstandingAmount / loan.emiAmount);
+        const monthlyRate = loan.interestRate / 12 / 100;
+
+        // Monthly Interest Burn - the actual money lost to interest each month
+        const monthlyInterestBurn = Math.round(loan.outstandingAmount * monthlyRate);
 
         // Calculate total interest if continued normally
-        const monthlyRate = loan.interestRate / 12 / 100;
         let totalInterest = 0;
         let balance = loan.outstandingAmount;
 
@@ -237,7 +312,7 @@ function analyzeLoansPriority(loans: ILoan[]): LoanDetail[] {
 
         let recommendedAction = '';
         if (index === 0) {
-            recommendedAction = '🔴 PRIORITY 1: Pay this loan first - highest interest rate';
+            recommendedAction = `🔴 PRIORITY 1: This loan is costing you ₹${monthlyInterestBurn.toLocaleString('en-IN')}/month in interest`;
         } else if (index === 1) {
             recommendedAction = '🟡 PRIORITY 2: Pay after first loan is cleared';
         } else {
@@ -251,6 +326,7 @@ function analyzeLoansPriority(loans: ILoan[]): LoanDetail[] {
             outstandingAmount: loan.outstandingAmount,
             interestRate: loan.interestRate,
             emiAmount: loan.emiAmount,
+            monthlyInterestBurn,
             priority: index + 1,
             monthsRemaining,
             totalInterestIfContinued: Math.round(totalInterest),
@@ -395,6 +471,167 @@ function generateRecommendations(
 }
 
 // =============================================================================
+// PERSONALIZED ADVICE GENERATOR (Human-friendly, emotionally compelling)
+// =============================================================================
+
+function generatePersonalizedAdvice(
+    snapshot: FinancialSnapshot,
+    loans: LoanDetail[],
+    repaymentPlan: RepaymentPlan[]
+): PersonalizedAdvice {
+    const emergencyFundRequired = snapshot.monthlyExpenses * 3;
+    const safeToUse = Math.max(0, snapshot.idleCash - emergencyFundRequired);
+
+    // Calculate totals for comparison
+    const totalInterestIfContinue = loans.reduce((sum, l) => sum + l.totalInterestIfContinued, 0);
+    const totalInterestSaved = repaymentPlan.reduce((sum, p) => sum + p.interestSaved, 0);
+    const totalMonthsIfContinue = loans.length > 0
+        ? Math.max(...loans.map(l => l.monthsRemaining))
+        : 0;
+    const monthsSaved = repaymentPlan.reduce((sum, p) =>
+        sum + Math.floor(p.suggestedPayment / (loans.find(l => l.id === p.loanId)?.emiAmount || 1)), 0
+    );
+
+    // ==========================================================================
+    // SECTION A: Your Personalized Debt Strategy
+    // ==========================================================================
+    const debtStrategy: DebtStrategyBlock = {
+        headline: loans.length > 0
+            ? "Your Personalized Debt Strategy"
+            : "You're Debt Free! 🎉",
+        subheadline: loans.length > 0
+            ? `Here's a simple plan to help you save money and become debt-free faster. We've ranked your ${loans.length} loan${loans.length > 1 ? 's' : ''} by how much money they're costing you each month — attacking the biggest money drain first saves you the most.`
+            : "Great news — you don't have any active loans. Keep building your savings!",
+        steps: loans.slice(0, 3).map((loan, idx) => {
+            let action = '';
+            let reason = '';
+
+            if (idx === 0) {
+                action = safeToUse > 0
+                    ? `Consider paying ₹${Math.min(safeToUse, loan.outstandingAmount).toLocaleString('en-IN')} extra`
+                    : 'Focus your extra payments here first';
+                reason = `This loan is costing you ₹${loan.monthlyInterestBurn.toLocaleString('en-IN')} every month in interest alone. That's the most among all your loans. Every rupee you pay early here saves you the most money.`;
+            } else if (idx === 1) {
+                action = 'Queue this for extra payments after the first loan';
+                reason = `This loan costs you ₹${loan.monthlyInterestBurn.toLocaleString('en-IN')}/month in interest. Once you clear the first loan, redirect those savings here.`;
+            } else {
+                action = 'Continue with regular EMIs for now';
+                reason = `At ₹${loan.monthlyInterestBurn.toLocaleString('en-IN')}/month in interest, this loan is less urgent. Stick to regular payments while focusing on the bigger drains.`;
+            }
+
+            return {
+                stepNumber: idx + 1,
+                loanName: loan.name,
+                interestRate: loan.interestRate,
+                action,
+                reason,
+                amount: idx === 0 && safeToUse > 0 ? Math.min(safeToUse, loan.outstandingAmount) : undefined
+            };
+        }),
+        encouragement: loans.length > 0
+            ? safeToUse > 0
+                ? "You're already ahead of most people — you have savings that can work harder for you. Small consistent actions lead to big wins!"
+                : "Even without extra funds right now, knowing your priority order puts you in control. Keep going!"
+            : "Stay consistent with your savings habits — you're doing great!"
+    };
+
+    // ==========================================================================
+    // SECTION B: What Happens If You Do Nothing vs Follow This Plan
+    // ==========================================================================
+    const comparison: ComparisonBlock = {
+        headline: "What Happens Next?",
+        doNothing: {
+            title: "If You Continue As Usual",
+            totalInterestPaid: totalInterestIfContinue,
+            monthsToDebtFree: totalMonthsIfContinue,
+            emotionalNote: totalInterestIfContinue > 10000
+                ? `You'll pay ₹${totalInterestIfContinue.toLocaleString('en-IN')} in interest — that's money going to the bank instead of your goals.`
+                : `You'll pay ₹${totalInterestIfContinue.toLocaleString('en-IN')} in interest over time.`
+        },
+        followPlan: {
+            title: "If You Follow This Plan",
+            totalInterestPaid: totalInterestIfContinue - totalInterestSaved,
+            monthsToDebtFree: Math.max(0, totalMonthsIfContinue - monthsSaved),
+            interestSaved: totalInterestSaved,
+            monthsSaved: monthsSaved,
+            emotionalNote: totalInterestSaved > 0
+                ? `You keep ₹${totalInterestSaved.toLocaleString('en-IN')} in your pocket and become debt-free ${monthsSaved} month${monthsSaved !== 1 ? 's' : ''} sooner!`
+                : "Even small extra payments add up over time."
+        },
+        verdict: totalInterestSaved > 5000
+            ? `By using your idle savings smartly, you could save ₹${totalInterestSaved.toLocaleString('en-IN')} — that's real money you can use for things that matter to you.`
+            : loans.length > 0
+                ? "Every extra rupee towards your highest-interest loan brings you closer to financial freedom."
+                : "Keep building your savings for future goals!"
+    };
+
+    // ==========================================================================
+    // SECTION C: Safe-to-Use Money Right Now
+    // ==========================================================================
+    let emergencyStatusText = '';
+    let warningNote: string | undefined;
+
+    if (snapshot.emergencyFundStatus === 'adequate') {
+        emergencyStatusText = "Your emergency fund is healthy! 💪";
+    } else if (snapshot.emergencyFundStatus === 'partial') {
+        emergencyStatusText = "You have some emergency savings, but we recommend building it to 3 months of expenses.";
+        warningNote = "We've already protected your emergency buffer — we'll never recommend using that money.";
+    } else {
+        emergencyStatusText = "You should build an emergency fund first.";
+        warningNote = "We recommend keeping at least 3 months of expenses as a safety net before aggressive debt payoff.";
+    }
+
+    let recommendationText = '';
+    if (safeToUse <= 0) {
+        recommendationText = "Right now, we recommend focusing on building your emergency fund before making extra loan payments. Even ₹500/month towards an emergency fund helps!";
+    } else if (safeToUse < 10000) {
+        recommendationText = `You have ₹${safeToUse.toLocaleString('en-IN')} that's safe to use. Consider putting ${loans.length > 0 ? 'half towards your highest-interest loan and half towards growing your emergency fund' : 'this towards your savings goals'}.`;
+    } else {
+        const suggestedPercent = Math.min(60, Math.max(30, Math.round((safeToUse / snapshot.idleCash) * 50)));
+        const suggestedAmount = Math.round(safeToUse * suggestedPercent / 100);
+        recommendationText = loans.length > 0
+            ? `You have ₹${safeToUse.toLocaleString('en-IN')} available beyond your emergency buffer. We suggest using about ${suggestedPercent}% (₹${suggestedAmount.toLocaleString('en-IN')}) for loan prepayment — keeping some flexibility for unexpected needs.`
+            : `You have ₹${safeToUse.toLocaleString('en-IN')} available to invest or save towards your goals!`;
+    }
+
+    const safeMoney: SafeMoneyBlock = {
+        headline: "Safe-to-Use Money Right Now",
+        totalIdleCash: snapshot.idleCash,
+        emergencyFundRequired: emergencyFundRequired,
+        emergencyFundStatus: emergencyStatusText,
+        safeToUse: safeToUse,
+        recommendation: recommendationText,
+        warningNote,
+        actionButton: safeToUse > 0 && loans.length > 0 ? {
+            text: `Pay ₹${Math.min(safeToUse, loans[0]!.outstandingAmount).toLocaleString('en-IN')} towards ${loans[0]!.name}`,
+            amount: Math.min(safeToUse, loans[0]!.outstandingAmount),
+            targetLoan: loans[0]!.name
+        } : null
+    };
+
+    // ==========================================================================
+    // Personal Coach Note
+    // ==========================================================================
+    let coachNote = '';
+    if (loans.length === 0) {
+        coachNote = "You're in a great position with no debt! Consider investing your surplus towards long-term goals.";
+    } else if (snapshot.monthlySurplus > 5000 && safeToUse > 10000) {
+        coachNote = "You're doing really well! Your consistent savings habit gives you options. Using even a portion of your idle cash for debt can accelerate your journey to financial freedom.";
+    } else if (snapshot.monthlySurplus > 0) {
+        coachNote = "You're saving each month — that's a great habit! Even small extra payments on your loans can save you thousands in the long run.";
+    } else {
+        coachNote = "Managing money can feel tough sometimes. Focus on building small habits first — the goal is progress, not perfection.";
+    }
+
+    return {
+        debtStrategy,
+        comparison,
+        safeMoney,
+        coachNote
+    };
+}
+
+// =============================================================================
 // MAIN FUNCTION
 // =============================================================================
 
@@ -421,12 +658,16 @@ export async function getSmartLoanAdvice(userId: mongoose.Types.ObjectId): Promi
         sum + Math.floor(p.suggestedPayment / (loans.find(l => l.id === p.loanId)?.emiAmount || 1)), 0
     );
 
+    // Generate personalized advice (human-friendly UI blocks)
+    const personalizedAdvice = generatePersonalizedAdvice(snapshot, loans, repaymentPlan);
+
     return {
         snapshot,
         monthlySavingsHistory,
         loans,
         repaymentPlan,
         recommendations,
+        personalizedAdvice,
         summary: {
             totalIdleSavings: snapshot.idleCash,
             totalPotentialInterestSaved,

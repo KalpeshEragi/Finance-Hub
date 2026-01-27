@@ -159,6 +159,7 @@ export interface LoanDetail {
     outstandingAmount: number;
     interestRate: number;
     emiAmount: number;
+    monthlyInterestBurn: number; // Monthly cost = Outstanding × (Rate/12)
     priority: number;
     monthsRemaining: number;
     totalInterestIfContinued: number;
@@ -202,6 +203,65 @@ export interface FinancialSnapshot {
     consistentSavingsMonths: number;
 }
 
+// =============================================================================
+// PERSONALIZED ADVICE UI BLOCKS
+// =============================================================================
+
+export interface DebtStrategyBlock {
+    headline: string;
+    subheadline: string;
+    steps: {
+        stepNumber: number;
+        loanName: string;
+        interestRate: number;
+        action: string;
+        reason: string;
+        amount?: number;
+    }[];
+    encouragement: string;
+}
+
+export interface ComparisonBlock {
+    headline: string;
+    doNothing: {
+        title: string;
+        totalInterestPaid: number;
+        monthsToDebtFree: number;
+        emotionalNote: string;
+    };
+    followPlan: {
+        title: string;
+        totalInterestPaid: number;
+        monthsToDebtFree: number;
+        interestSaved: number;
+        monthsSaved: number;
+        emotionalNote: string;
+    };
+    verdict: string;
+}
+
+export interface SafeMoneyBlock {
+    headline: string;
+    totalIdleCash: number;
+    emergencyFundRequired: number;
+    emergencyFundStatus: string;
+    safeToUse: number;
+    recommendation: string;
+    warningNote?: string;
+    actionButton: {
+        text: string;
+        amount: number;
+        targetLoan?: string;
+    } | null;
+}
+
+export interface PersonalizedAdvice {
+    debtStrategy: DebtStrategyBlock;
+    comparison: ComparisonBlock;
+    safeMoney: SafeMoneyBlock;
+    coachNote: string;
+}
+
 export interface SmartLoanAdviceResponse {
     success: boolean;
     data: {
@@ -210,6 +270,7 @@ export interface SmartLoanAdviceResponse {
         loans: LoanDetail[];
         repaymentPlan: RepaymentPlan[];
         recommendations: LoanRecommendation[];
+        personalizedAdvice: PersonalizedAdvice;
         summary: {
             totalIdleSavings: number;
             totalPotentialInterestSaved: number;

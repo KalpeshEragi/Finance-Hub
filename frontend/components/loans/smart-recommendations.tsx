@@ -8,7 +8,8 @@ import {
     MonthlySavingsData,
     LoanDetail,
     RepaymentPlan,
-    LoanRecommendation
+    LoanRecommendation,
+    PersonalizedAdvice
 } from '@/lib/api/loans';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -86,7 +87,7 @@ export function SmartRecommendations({ className }: SmartRecommendationsProps) {
 
     if (!data) return null;
 
-    const { snapshot, monthlySavingsHistory, loans, repaymentPlan, recommendations, summary } = data;
+    const { snapshot, monthlySavingsHistory, loans, repaymentPlan, recommendations, personalizedAdvice, summary } = data;
 
     return (
         <div className={`space-y-6 ${className}`}>
@@ -102,13 +103,18 @@ export function SmartRecommendations({ className }: SmartRecommendationsProps) {
             </div>
 
             {/* Tabs for different views */}
-            <Tabs defaultValue="recommendations" className="w-full">
-                <TabsList className="grid w-full grid-cols-4 bg-muted/20 p-1">
-                    <TabsTrigger value="recommendations" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Recommendations</TabsTrigger>
-                    <TabsTrigger value="repayment" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Repayment Plan</TabsTrigger>
-                    <TabsTrigger value="loans" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Loan Priority</TabsTrigger>
-                    <TabsTrigger value="history" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Savings History</TabsTrigger>
+            <Tabs defaultValue="myplan" className="w-full">
+                <TabsList className="grid w-full grid-cols-5 bg-muted/20 p-1">
+                    <TabsTrigger value="myplan" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">My Plan</TabsTrigger>
+                    <TabsTrigger value="recommendations" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Insights</TabsTrigger>
+                    <TabsTrigger value="repayment" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Repayment</TabsTrigger>
+                    <TabsTrigger value="loans" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">Loans</TabsTrigger>
+                    <TabsTrigger value="history" className="data-[state=active]:bg-primary/20 data-[state=active]:text-primary">History</TabsTrigger>
                 </TabsList>
+
+                <TabsContent value="myplan" className="mt-6">
+                    <PersonalizedAdviceView advice={personalizedAdvice} />
+                </TabsContent>
 
                 <TabsContent value="recommendations" className="mt-6">
                     <RecommendationsView recommendations={recommendations} summary={summary} />
@@ -129,6 +135,195 @@ export function SmartRecommendations({ className }: SmartRecommendationsProps) {
 
             {/* Financial Snapshot - Moved to bottom */}
             <FinancialSnapshotCard snapshot={snapshot} />
+        </div>
+    );
+}
+
+// =============================================================================
+// PERSONALIZED ADVICE VIEW (Human-friendly, emotionally compelling)
+// =============================================================================
+function PersonalizedAdviceView({ advice }: { advice: PersonalizedAdvice }) {
+    const { debtStrategy, comparison, safeMoney, coachNote } = advice;
+
+    return (
+        <div className="space-y-6">
+            {/* Section A: Your Personalized Debt Strategy */}
+            <Card className="bg-gradient-to-br from-violet-500/10 to-purple-500/5 border-violet-500/20">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-xl">
+                        <Target className="h-6 w-6 text-violet-500" />
+                        {debtStrategy.headline}
+                    </CardTitle>
+                    <CardDescription className="text-base">
+                        {debtStrategy.subheadline}
+                    </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {debtStrategy.steps.length > 0 ? (
+                        <div className="space-y-4">
+                            {debtStrategy.steps.map((step) => (
+                                <div key={step.stepNumber} className="p-4 rounded-lg bg-background/50 border border-border hover:border-violet-500/30 transition-colors">
+                                    <div className="flex items-start gap-4">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shrink-0 ${step.stepNumber === 1 ? 'bg-gradient-to-br from-red-500 to-orange-500' :
+                                            step.stepNumber === 2 ? 'bg-gradient-to-br from-orange-500 to-amber-500' :
+                                                'bg-gradient-to-br from-slate-400 to-slate-500'
+                                            }`}>
+                                            {step.stepNumber}
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="flex items-center gap-2 mb-1">
+                                                <h4 className="font-semibold">{step.loanName}</h4>
+                                                <Badge variant="outline" className="text-xs">{step.interestRate}% interest</Badge>
+                                            </div>
+                                            <p className="font-medium text-primary mb-1">{step.action}</p>
+                                            <p className="text-sm text-muted-foreground">{step.reason}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="text-center py-6">
+                            <CheckCircle2 className="h-12 w-12 text-teal-500 mx-auto mb-2" />
+                            <p className="text-muted-foreground">You're debt-free! 🎉</p>
+                        </div>
+                    )}
+
+                    <div className="p-4 rounded-lg bg-teal-500/10 border border-teal-500/20">
+                        <p className="text-sm text-teal-600 dark:text-teal-400 font-medium">
+                            💪 {debtStrategy.encouragement}
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Section B: What Happens If You Do Nothing vs Follow Plan */}
+            <Card className="border-border">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <ArrowRight className="h-5 w-5 text-primary" />
+                        {comparison.headline}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Do Nothing */}
+                        <div className="p-5 rounded-lg bg-rose-500/5 border border-rose-500/20">
+                            <h4 className="font-semibold text-rose-500 mb-3">{comparison.doNothing.title}</h4>
+                            <div className="space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-muted-foreground">Total Interest</span>
+                                    <span className="font-semibold text-rose-500">₹{comparison.doNothing.totalInterestPaid.toLocaleString('en-IN')}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-muted-foreground">Months to Debt-Free</span>
+                                    <span className="font-semibold">{comparison.doNothing.monthsToDebtFree} months</span>
+                                </div>
+                            </div>
+                            <p className="mt-4 text-sm text-rose-500/80 italic">
+                                {comparison.doNothing.emotionalNote}
+                            </p>
+                        </div>
+
+                        {/* Follow Plan */}
+                        <div className="p-5 rounded-lg bg-teal-500/5 border border-teal-500/20">
+                            <h4 className="font-semibold text-teal-500 mb-3">{comparison.followPlan.title}</h4>
+                            <div className="space-y-2">
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-muted-foreground">Total Interest</span>
+                                    <span className="font-semibold text-teal-500">₹{comparison.followPlan.totalInterestPaid.toLocaleString('en-IN')}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-sm text-muted-foreground">Months to Debt-Free</span>
+                                    <span className="font-semibold">{comparison.followPlan.monthsToDebtFree} months</span>
+                                </div>
+                                {comparison.followPlan.interestSaved > 0 && (
+                                    <div className="flex justify-between pt-2 border-t border-teal-500/20">
+                                        <span className="text-sm font-medium text-teal-600 dark:text-teal-400">You Save</span>
+                                        <span className="font-bold text-teal-600 dark:text-teal-400">₹{comparison.followPlan.interestSaved.toLocaleString('en-IN')}</span>
+                                    </div>
+                                )}
+                            </div>
+                            <p className="mt-4 text-sm text-teal-600 dark:text-teal-400 font-medium">
+                                ✨ {comparison.followPlan.emotionalNote}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 p-4 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                        <p className="text-sm text-blue-600 dark:text-blue-400">
+                            <span className="font-semibold">Bottom Line: </span>
+                            {comparison.verdict}
+                        </p>
+                    </div>
+                </CardContent>
+            </Card>
+
+            {/* Section C: Safe-to-Use Money Right Now */}
+            <Card className="border-border">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Shield className="h-5 w-5 text-violet-500" />
+                        {safeMoney.headline}
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="p-3 rounded-lg bg-accent/50">
+                            <p className="text-xs text-muted-foreground">Idle Cash</p>
+                            <p className="text-lg font-semibold">₹{safeMoney.totalIdleCash.toLocaleString('en-IN')}</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-amber-500/10">
+                            <p className="text-xs text-muted-foreground">Emergency Buffer</p>
+                            <p className="text-lg font-semibold text-amber-600 dark:text-amber-400">₹{safeMoney.emergencyFundRequired.toLocaleString('en-IN')}</p>
+                        </div>
+                        <div className="p-3 rounded-lg bg-teal-500/10 col-span-2 md:col-span-2">
+                            <p className="text-xs text-muted-foreground">Safe to Use</p>
+                            <p className="text-2xl font-bold text-teal-600 dark:text-teal-400">₹{safeMoney.safeToUse.toLocaleString('en-IN')}</p>
+                        </div>
+                    </div>
+
+                    <div className="p-4 rounded-lg bg-background border border-border">
+                        <p className="text-sm mb-2">
+                            <span className="font-medium">Emergency Fund: </span>
+                            {safeMoney.emergencyFundStatus}
+                        </p>
+                        <p className="text-muted-foreground text-sm">
+                            {safeMoney.recommendation}
+                        </p>
+                    </div>
+
+                    {safeMoney.warningNote && (
+                        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                            <p className="text-sm text-amber-600 dark:text-amber-400">
+                                ⚠️ {safeMoney.warningNote}
+                            </p>
+                        </div>
+                    )}
+
+                    {safeMoney.actionButton && (
+                        <Button className="w-full bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700">
+                            {safeMoney.actionButton.text}
+                            <ArrowRight className="ml-2 h-4 w-4" />
+                        </Button>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Coach Note */}
+            <Card className="bg-gradient-to-r from-slate-900 to-slate-800 dark:from-slate-800 dark:to-slate-900 text-white border-0">
+                <CardContent className="pt-6">
+                    <div className="flex items-start gap-4">
+                        <div className="p-3 rounded-full bg-white/10">
+                            <Brain className="h-6 w-6" />
+                        </div>
+                        <div>
+                            <h4 className="font-semibold mb-1">A Note From Your Money Coach</h4>
+                            <p className="text-white/80">{coachNote}</p>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
         </div>
     );
 }
@@ -477,9 +672,9 @@ function LoanPriorityView({ loans }: { loans: LoanDetail[] }) {
                     <div className="flex items-center gap-3">
                         <Lightbulb className="h-6 w-6 text-amber-500" />
                         <div>
-                            <h3 className="font-semibold text-amber-500">Debt Avalanche Strategy</h3>
+                            <h3 className="font-semibold text-amber-500">Interest-Cost Weighted Strategy</h3>
                             <p className="text-sm text-muted-foreground">
-                                Loans are prioritized by interest rate. Pay off high-interest loans first to minimize total interest paid.
+                                Loans are ranked by monthly interest cost (Outstanding × Rate). Attack the loan draining the most money each month first!
                             </p>
                         </div>
                     </div>
@@ -501,22 +696,26 @@ function LoanPriorityView({ loans }: { loans: LoanDetail[] }) {
                                 </div>
                             </div>
                             <div className="text-right">
-                                <p className="text-2xl font-bold text-red-500">{loan.interestRate}%</p>
-                                <p className="text-xs text-muted-foreground">Interest Rate</p>
+                                <p className="text-2xl font-bold text-red-500">₹{loan.monthlyInterestBurn.toLocaleString('en-IN')}</p>
+                                <p className="text-xs text-muted-foreground">Monthly Interest Cost</p>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4 mb-4">
+                        <div className="grid grid-cols-4 gap-3 mb-4">
                             <div className="p-3 rounded-lg bg-accent/50">
                                 <p className="text-xs text-muted-foreground">Outstanding</p>
                                 <p className="font-semibold">₹{loan.outstandingAmount.toLocaleString('en-IN')}</p>
+                            </div>
+                            <div className="p-3 rounded-lg bg-accent/50">
+                                <p className="text-xs text-muted-foreground">Interest Rate</p>
+                                <p className="font-semibold">{loan.interestRate}%</p>
                             </div>
                             <div className="p-3 rounded-lg bg-accent/50">
                                 <p className="text-xs text-muted-foreground">Monthly EMI</p>
                                 <p className="font-semibold">₹{loan.emiAmount.toLocaleString('en-IN')}</p>
                             </div>
                             <div className="p-3 rounded-lg bg-accent/50">
-                                <p className="text-xs text-muted-foreground">Months Remaining</p>
+                                <p className="text-xs text-muted-foreground">Months Left</p>
                                 <p className="font-semibold">{loan.monthsRemaining}</p>
                             </div>
                         </div>
