@@ -42,10 +42,12 @@ router.get('/:id', goalsController.getById);
 
 /**
  * @route PUT /goals/:id
- * @description Update a goal
+ * @route PATCH /goals/:id
+ * @description Update a goal (supports both PUT and PATCH)
  * @access Private
  */
 router.put('/:id', goalsController.update);
+router.patch('/:id', goalsController.update);
 
 /**
  * @route DELETE /goals/:id
