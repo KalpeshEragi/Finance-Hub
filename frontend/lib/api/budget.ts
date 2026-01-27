@@ -116,3 +116,37 @@ export async function checkBudgetAlerts(): Promise<{ success: boolean; data: { a
     if (!response.ok) throw new Error(data.message || 'Failed to check budget alerts');
     return data;
 }
+
+export interface BudgetRecommendation {
+    category: string;
+    current_spending: number;
+    recommended_limit: number;
+    potential_savings: number;
+    reason: string;
+    action_item: string;
+    priority: number;
+}
+
+export interface BudgetAdviceResponse {
+    total_spending: number;
+    needs_spending: number;
+    wants_spending: number;
+    savings_spending: number;
+    recommendations: BudgetRecommendation[];
+    estimated_monthly_savings: number;
+    message?: string;
+}
+
+/**
+ * Fetch budget advice from AI agent
+ */
+export async function getBudgetAdvice(): Promise<{ success: boolean; data: BudgetAdviceResponse }> {
+    const response = await fetch(`${API_BASE_URL}/budget/advice`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Failed to fetch budget advice');
+    return data;
+}

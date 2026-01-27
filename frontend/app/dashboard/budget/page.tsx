@@ -34,7 +34,7 @@ import {
     SelectTrigger,
     SelectValue
 } from "@/components/ui/select"
-import { getBudgetSummary, setBudget, type BudgetWithSpending } from "@/lib/api/budget"
+import { getBudgetSummary, setBudget, getBudgetAdvice, type BudgetWithSpending, type BudgetAdviceResponse } from "@/lib/api/budget"
 import { useToast } from "@/components/ui/use-toast"
 import { cn } from "@/lib/utils"
 
@@ -63,6 +63,10 @@ export default function BudgetPage() {
     const [isSaving, setIsSaving] = useState(false)
     const { toast } = useToast()
 
+    // Budget Agent State
+    const [advice, setAdvice] = useState<BudgetAdviceResponse | null>(null)
+    const [adviceLoading, setAdviceLoading] = useState(false)
+
     // Form state
     const [selectedCategory, setSelectedCategory] = useState('')
     const [customCategoryName, setCustomCategoryName] = useState('')
@@ -78,6 +82,18 @@ export default function BudgetPage() {
             setBudgets(data?.budgets ?? [])
             setTotalBudget(data?.totalBudget ?? 0)
             setTotalSpent(data?.totalSpent ?? 0)
+
+            // Fetch Advice
+            setAdviceLoading(true)
+            try {
+                const adviceRes = await getBudgetAdvice()
+                setAdvice(adviceRes?.data)
+            } catch (e) {
+                console.error("Failed to fetch advice", e)
+            } finally {
+                setAdviceLoading(false)
+            }
+
         } catch (error) {
             // Reset to safe defaults on error
             setBudgets([])
@@ -237,6 +253,72 @@ export default function BudgetPage() {
                                 <span>Spent ₹{totalSpent?.toLocaleString() ?? "0"}</span>
                                 <span>Budget ₹{totalBudget?.toLocaleString() ?? "0"}</span>
                             </div>
+                        </CardContent>
+                    </Card>
+
+                    {/* Budget Agent Advice */}
+                    <Card className="bg-card border-border mb-6">
+                        <CardHeader>
+                            <div className="flex items-center gap-2">
+                                <span className="text-2xl">🤖</span>
+                                <div>
+                                    <CardTitle>Money Council: Budget Agent</CardTitle>
+                                    <CardDescription>Personalized recommendations to save money</CardDescription>
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            {adviceLoading ? (
+                                <div className="space-y-4">
+                                    <div className="h-4 bg-secondary rounded w-3/4 animate-pulse"></div>
+                                    <div className="h-4 bg-secondary rounded w-1/2 animate-pulse"></div>
+                                </div>
+                            ) : advice ? (
+                                <div className="space-y-6">
+                                    <div className="flex flex-col md:flex-row gap-4 p-4 bg-primary/5 rounded-lg border border-primary/10">
+                                        <div className="flex-1">
+                                            <p className="text-sm text-muted-foreground mb-1">Potential Monthly Savings</p>
+                                            <p className="text-2xl font-bold text-primary">₹{advice.estimated_monthly_savings.toLocaleString()}</p>
+                                        </div>
+                                        <div className="flex-1">
+                                            <p className="text-sm text-muted-foreground mb-1">Discretionary Spending</p>
+                                            <p className="text-xl font-semibold text-foreground">₹{advice.wants_spending.toLocaleString()}</p>
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <h4 className="font-medium mb-3 flex items-center gap-2">
+                                            <TrendingUp className="w-4 h-4 text-emerald-500" />
+                                            Top Areas to Reduce
+                                        </h4>
+                                        <div className="space-y-3">
+                                            {advice.recommendations.map((rec, idx) => (
+                                                <div key={idx} className="p-4 rounded-lg border border-border bg-secondary/50">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div>
+                                                            <h5 className="font-semibold text-foreground">{rec.category}</h5>
+                                                            <p className="text-xs text-muted-foreground">Current: ₹{rec.current_spending.toLocaleString()}</p>
+                                                        </div>
+                                                        <Badge variant="outline" className="border-emerald-500/30 text-emerald-500 bg-emerald-500/10">
+                                                            Save ₹{rec.potential_savings.toLocaleString()}
+                                                        </Badge>
+                                                    </div>
+                                                    <p className="text-sm text-muted-foreground mb-2">{rec.reason}</p>
+                                                    <div className="flex items-center gap-2 text-sm text-foreground bg-card p-2 rounded border border-border">
+                                                        <CheckCircle2 className="w-4 h-4 text-primary" />
+                                                        {rec.action_item}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {advice.recommendations.length === 0 && (
+                                                <p className="text-muted-foreground text-sm italic">Great job! Your spending looks optimized.</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <p className="text-muted-foreground">No advice available yet.</p>
+                            )}
                         </CardContent>
                     </Card>
 
