@@ -90,13 +90,25 @@ export const getAlerts = asyncHandler(async (req: Request, res: Response) => {
 /**
  * @controller getAdvice
  * @route GET /budget/advice
- * @description Gets AI-powered budget advice.
+ * @description Gets AI-powered budget advice for a specific month/year.
+ * 
+ * CRITICAL: This endpoint MUST respect month/year query params to ensure
+ * temporal correctness. Without proper scoping, advice from the wrong
+ * month would be returned, causing data integrity issues.
+ * 
+ * @query month - Optional. Month to analyze (1-12). Defaults to current month.
+ * @query year - Optional. Year to analyze (e.g., 2025). Defaults to current year.
  * @auth Required
  */
 export const getAdvice = asyncHandler(async (req: Request, res: Response) => {
     const userId = req.user!.userId;
 
-    const result = await budgetService.getBudgetAdvice(userId);
+    // CRITICAL: Parse month/year from query params for temporal correctness
+    // If not provided, the service will fall back to current month (backwards compatible)
+    const month = req.query.month ? parseInt(req.query.month as string) : undefined;
+    const year = req.query.year ? parseInt(req.query.year as string) : undefined;
+
+    const result = await budgetService.getBudgetAdvice(userId, month, year);
 
     res.status(HTTP_STATUS.OK).json({
         success: true,

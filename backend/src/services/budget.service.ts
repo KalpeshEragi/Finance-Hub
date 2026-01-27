@@ -217,24 +217,44 @@ export async function checkBudgetAlerts(userId: string): Promise<{ alertsCreated
 
 /**
  * @function getBudgetAdvice
- * @description Gets personalized budget advice and savings recommendations.
+ * @description Gets personalized budget advice and savings recommendations for a specific month/year.
+ * 
+ * CRITICAL: This function MUST use the provided month/year parameters to ensure
+ * temporal correctness. Using getCurrentMonthRange() would cause data leakage
+ * from the wrong month, which is a data integrity bug.
  * 
  * TEMPORARY: Uses local rule-based logic instead of AI Engine.
  * TODO: Reconnect to AI Engine after hackathon deadline.
  * 
  * @param userId - User ID
- * @returns Budget analysis with recommendations
+ * @param month - Optional. Month to analyze (1-12). Defaults to current month.
+ * @param year - Optional. Year to analyze (e.g., 2025). Defaults to current year.
+ * @returns Budget analysis with recommendations for the specified month/year
+ * 
+ * @example
+ * // Get advice for February 2025
+ * const advice = await getBudgetAdvice(userId, 2, 2025);
  */
-export async function getBudgetAdvice(userId: string) {
-    const { start, end } = getCurrentMonthRange();
+export async function getBudgetAdvice(userId: string, month?: number, year?: number) {
+    // CRITICAL: Derive target month/year with fallback to current date for backwards compatibility
+    const now = new Date();
+    const targetMonth = month ?? now.getMonth() + 1;
+    const targetYear = year ?? now.getFullYear();
 
-    // 1. Fetch recent transactions (current month)
+    // Get date range for the target month - getMonthRange requires explicit values
+    const { start, end } = getMonthRange(targetYear, targetMonth);
+
+    // Derive month name for enhanced messaging
+    const monthName = new Date(targetYear, targetMonth - 1).toLocaleString('default', { month: 'long' });
+
+    // 1. Fetch transactions for the specified month (NOT current system month)
     const transactions = await Transaction.find({
         userId,
         date: { $gte: start, $lte: end },
         type: 'expense'
     });
 
+    // Edge case: No transactions for selected month - return zero-state
     if (transactions.length === 0) {
         return {
             total_spending: 0,
@@ -243,12 +263,12 @@ export async function getBudgetAdvice(userId: string) {
             savings_spending: 0,
             recommendations: [],
             estimated_monthly_savings: 0,
-            message: "No transactions found for analysis this month."
+            message: `No expense transactions found for ${monthName} ${targetYear}. Add transactions to get personalized recommendations.`
         };
     }
 
     // 2. Local Rule-Based Analysis (Temporary - bypassing AI Engine)
-    // Categorize spending into buckets
+    // Categorize spending into 50-30-20 buckets
     const NEEDS_CATEGORIES = ['Groceries', 'Bills & Utilities', 'Rent', 'EMI', 'Insurance', 'Healthcare', 'Education'];
     const WANTS_CATEGORIES = ['Food & Dining', 'Shopping', 'Entertainment', 'Travel', 'Other'];
     const SAVINGS_CATEGORIES = ['Savings', 'Investment'];
@@ -265,7 +285,7 @@ export async function getBudgetAdvice(userId: string) {
         // Aggregate by category
         categoryTotals[category] = (categoryTotals[category] || 0) + amount;
 
-        // Bucket assignment
+        // Bucket assignment based on 50-30-20 rule
         if (NEEDS_CATEGORIES.includes(category)) {
             needsSpending += amount;
         } else if (SAVINGS_CATEGORIES.includes(category)) {
@@ -278,6 +298,7 @@ export async function getBudgetAdvice(userId: string) {
     const totalSpending = needsSpending + wantsSpending + savingsSpending;
 
     // 3. Generate Recommendations (Rule-Based)
+    // Only generate for discretionary ("Wants") categories that exceed threshold
     const recommendations: Array<{
         category: string;
         current_spending: number;
@@ -291,25 +312,47 @@ export async function getBudgetAdvice(userId: string) {
     const REDUCTION_PERCENT = 0.15; // 15% reduction target
     const MIN_THRESHOLD = 500; // Only recommend for categories > ₹500
 
-    // Sort "Wants" categories by spending (highest first)
+    // Sort "Wants" categories by spending (highest first) for prioritized recommendations
     const wantsCategorySpending = Object.entries(categoryTotals)
         .filter(([cat]) => WANTS_CATEGORIES.includes(cat) || !NEEDS_CATEGORIES.includes(cat))
         .filter(([, amount]) => amount >= MIN_THRESHOLD)
         .sort(([, a], [, b]) => b - a);
 
-    // Generate top 3 recommendations
+    // Generate top 3 recommendations with enhanced, context-aware copy
     let priority = 1;
     for (const [category, amount] of wantsCategorySpending.slice(0, 3)) {
         const potentialSavings = Math.round(amount * REDUCTION_PERCENT);
         const recommendedLimit = Math.round(amount * (1 - REDUCTION_PERCENT));
+
+        // Enhanced copy based on category type
+        let reason: string;
+        let actionItem: string;
+
+        if (category === 'Food & Dining') {
+            reason = `You spent ₹${amount.toLocaleString()} on dining out in ${monthName}. This discretionary expense can be reduced by cooking at home more often.`;
+            actionItem = `Set a budget of ₹${recommendedLimit.toLocaleString()} for ${category} and track meal expenses to save ₹${potentialSavings.toLocaleString()}.`;
+        } else if (category === 'Shopping') {
+            reason = `Your shopping expenses totaled ₹${amount.toLocaleString()} in ${monthName}. Consider distinguishing between needs and wants before purchases.`;
+            actionItem = `Limit impulse purchases and aim for ₹${recommendedLimit.toLocaleString()} next month to save ₹${potentialSavings.toLocaleString()}.`;
+        } else if (category === 'Entertainment') {
+            reason = `Entertainment spending was ₹${amount.toLocaleString()} in ${monthName}. While leisure is important, there may be room for optimization.`;
+            actionItem = `Look for free or low-cost alternatives and target ₹${recommendedLimit.toLocaleString()} to save ₹${potentialSavings.toLocaleString()}.`;
+        } else if (category === 'Travel') {
+            reason = `Travel expenses reached ₹${amount.toLocaleString()} in ${monthName}. Consider booking in advance for better rates.`;
+            actionItem = `Plan trips ahead and set a budget of ₹${recommendedLimit.toLocaleString()} to save ₹${potentialSavings.toLocaleString()}.`;
+        } else {
+            // Generic fallback for other discretionary categories
+            reason = `You spent ₹${amount.toLocaleString()} on ${category} in ${monthName} ${targetYear}. This is a discretionary expense that can be optimized.`;
+            actionItem = `Consider setting a budget of ₹${recommendedLimit.toLocaleString()} for ${category} to save ₹${potentialSavings.toLocaleString()} next month.`;
+        }
 
         recommendations.push({
             category,
             current_spending: amount,
             recommended_limit: recommendedLimit,
             potential_savings: potentialSavings,
-            reason: `You spent ₹${amount.toLocaleString()} on ${category} this month. This is a discretionary expense that can be optimized.`,
-            action_item: `Try to limit ${category} spending to ₹${recommendedLimit.toLocaleString()} next month.`,
+            reason,
+            action_item: actionItem,
             priority: priority++,
         });
     }
@@ -323,6 +366,9 @@ export async function getBudgetAdvice(userId: string) {
         savings_spending: savingsSpending,
         recommendations,
         estimated_monthly_savings: estimatedMonthlySavings,
+        // Include month context in response for debugging/display
+        month: targetMonth,
+        year: targetYear,
     };
 
     // =========================================================================

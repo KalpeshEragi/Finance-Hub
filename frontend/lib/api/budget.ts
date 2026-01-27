@@ -138,10 +138,29 @@ export interface BudgetAdviceResponse {
 }
 
 /**
- * Fetch budget advice from AI agent
+ * @function getBudgetAdvice
+ * @description Fetches personalized budget advice and savings recommendations from the AI agent.
+ * 
+ * CRITICAL: This function MUST receive month/year to ensure temporal correctness.
+ * Without these params, the backend would use the current system month, causing
+ * data from the wrong month to be displayed.
+ * 
+ * @param month - The month to analyze (1-12). Required for correct temporal scoping.
+ * @param year - The year to analyze (e.g., 2025). Required for correct temporal scoping.
+ * @returns Promise containing budget analysis with recommendations for the specified month/year.
+ * @throws Error if the API request fails.
+ * 
+ * @example
+ * // Fetch advice for February 2025
+ * const advice = await getBudgetAdvice(2, 2025);
  */
-export async function getBudgetAdvice(): Promise<{ success: boolean; data: BudgetAdviceResponse }> {
-    const response = await fetch(`${API_BASE_URL}/budget/advice`, {
+export async function getBudgetAdvice(month?: number, year?: number): Promise<{ success: boolean; data: BudgetAdviceResponse }> {
+    // Build query params - these are CRITICAL for temporal correctness
+    const params = new URLSearchParams();
+    if (month) params.append('month', month.toString());
+    if (year) params.append('year', year.toString());
+
+    const response = await fetch(`${API_BASE_URL}/budget/advice?${params}`, {
         method: 'GET',
         headers: getAuthHeaders(),
     });

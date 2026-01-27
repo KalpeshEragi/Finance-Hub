@@ -83,10 +83,11 @@ export default function BudgetPage() {
             setTotalBudget(data?.totalBudget ?? 0)
             setTotalSpent(data?.totalSpent ?? 0)
 
-            // Fetch Advice
+            // Fetch Advice - CRITICAL: Pass month/year for temporal correctness
+            // Without these params, advice would show data from the wrong month
             setAdviceLoading(true)
             try {
-                const adviceRes = await getBudgetAdvice()
+                const adviceRes = await getBudgetAdvice(month, year)
                 setAdvice(adviceRes?.data)
             } catch (e) {
                 console.error("Failed to fetch advice", e)
@@ -161,6 +162,7 @@ export default function BudgetPage() {
                     <p className="text-sm text-muted-foreground">Manage your spending limits and track savings</p>
                 </div>
                 <div className="flex items-center gap-3">
+                    {/* Month Selector */}
                     <Select value={month.toString()} onValueChange={(v) => setMonth(parseInt(v))}>
                         <SelectTrigger className="w-[130px] bg-secondary border-border">
                             <Calendar className="w-4 h-4 mr-2" />
@@ -174,6 +176,25 @@ export default function BudgetPage() {
                             ))}
                         </SelectContent>
                     </Select>
+
+                    {/* Year Selector - CRITICAL for temporal correctness */}
+                    <Select value={year.toString()} onValueChange={(v) => setYear(parseInt(v))}>
+                        <SelectTrigger className="w-[100px] bg-secondary border-border">
+                            <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="bg-card border-border">
+                            {/* Show current year ± 2 years for practical navigation */}
+                            {Array.from({ length: 5 }, (_, i) => {
+                                const y = new Date().getFullYear() - 2 + i;
+                                return (
+                                    <SelectItem key={y} value={y.toString()}>
+                                        {y}
+                                    </SelectItem>
+                                );
+                            })}
+                        </SelectContent>
+                    </Select>
+
                     <Button onClick={() => setIsDialogOpen(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground">
                         <Plus className="w-4 h-4 mr-2" />
                         Set Budget
@@ -188,49 +209,51 @@ export default function BudgetPage() {
                 </div>
             ) : (
                 <>
-                    {/* Summary Cards */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Summary Cards - Styled like Loans & Debt */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                         <Card className="bg-card border-border">
-                            <CardContent className="pt-6">
-                                <div className="flex items-center justify-between mb-2">
-                                    <p className="text-sm font-medium text-muted-foreground">Total Budget</p>
-                                    <div className="p-2 rounded-lg bg-primary/10">
-                                        <IndianRupee className="w-4 h-4 text-primary" />
+                            <CardContent className="p-5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                                        <IndianRupee className="w-5 h-5 text-primary" />
                                     </div>
-                                </div>
-                                <div className="flex items-baseline gap-2">
-                                    <h3 className="text-2xl font-bold text-foreground">₹{totalBudget?.toLocaleString() ?? "0"}</h3>
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">Total Budget</p>
+                                        <p className="text-2xl font-bold text-foreground">₹{totalBudget?.toLocaleString() ?? "0"}</p>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
 
                         <Card className="bg-card border-border">
-                            <CardContent className="pt-6">
-                                <div className="flex items-center justify-between mb-2">
-                                    <p className="text-sm font-medium text-muted-foreground">Total Spent</p>
-                                    <div className="p-2 rounded-lg bg-secondary">
-                                        <TrendingUp className="w-4 h-4 text-foreground" />
+                            <CardContent className="p-5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center">
+                                        <TrendingUp className="w-5 h-5 text-amber-500" />
                                     </div>
-                                </div>
-                                <div className="flex items-baseline gap-2">
-                                    <h3 className="text-2xl font-bold text-foreground">₹{totalSpent?.toLocaleString() ?? "0"}</h3>
-                                    <span className={cn("text-xs", overallPercentage > 90 ? "text-red-400" : "text-emerald-400")}>
-                                        {overallPercentage.toFixed(1)}% used
-                                    </span>
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">Total Spent</p>
+                                        <div className="flex items-baseline gap-2">
+                                            <p className="text-2xl font-bold text-foreground">₹{totalSpent?.toLocaleString() ?? "0"}</p>
+                                            <span className={cn("text-xs", overallPercentage > 90 ? "text-red-400" : "text-emerald-400")}>
+                                                {overallPercentage.toFixed(1)}%
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
 
                         <Card className="bg-card border-border">
-                            <CardContent className="pt-6">
-                                <div className="flex items-center justify-between mb-2">
-                                    <p className="text-sm font-medium text-muted-foreground">Remaining</p>
-                                    <div className="p-2 rounded-lg bg-emerald-500/10">
-                                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                            <CardContent className="p-5">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                                        <CheckCircle2 className="w-5 h-5 text-emerald-500" />
                                     </div>
-                                </div>
-                                <div className="flex items-baseline gap-2">
-                                    <h3 className="text-2xl font-bold text-foreground">₹{remainingTotal?.toLocaleString() ?? "0"}</h3>
+                                    <div>
+                                        <p className="text-sm text-muted-foreground">Remaining</p>
+                                        <p className="text-2xl font-bold text-foreground">₹{remainingTotal?.toLocaleString() ?? "0"}</p>
+                                    </div>
                                 </div>
                             </CardContent>
                         </Card>
@@ -323,60 +346,61 @@ export default function BudgetPage() {
                     </Card>
 
                     {/* Category Budgets */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        <Card className="bg-card border-border lg:col-span-2">
-                            <CardHeader className="flex flex-row items-center justify-between">
-                                <div>
-                                    <CardTitle className="text-lg">Category Breakdown</CardTitle>
-                                    <CardDescription>Spending limits for each category</CardDescription>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="space-y-6">
-                                    {budgets.length > 0 ? budgets.map((budget) => (
-                                        <div key={budget.id} className="space-y-2">
-                                            <div className="flex justify-between items-center">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-medium text-foreground">{budget.category}</span>
-                                                    {budget.status === 'exceeded' && (
-                                                        <Badge className="bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20">
-                                                            Over Budget
-                                                        </Badge>
-                                                    )}
-                                                    {budget.status === 'warning' && (
-                                                        <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20">
-                                                            Warning
-                                                        </Badge>
-                                                    )}
-                                                </div>
-                                                <div className="text-sm">
-                                                    <span className="text-foreground font-semibold">₹{budget.spent.toLocaleString()}</span>
-                                                    <span className="text-muted-foreground ml-1">of ₹{budget.limit.toLocaleString()}</span>
-                                                </div>
-                                            </div>
-                                            <Progress
-                                                value={Math.min(budget.percentage, 100)}
-                                                className={cn(
-                                                    "h-2 bg-secondary",
-                                                    budget.status === 'exceeded' ? "bg-red-500/20" : budget.status === 'warning' ? "bg-amber-500/20" : "",
-                                                    // The indicator styling is now part of the main className
-                                                    budget.status === 'exceeded' ? "[&>div]:bg-red-500" : budget.status === 'warning' ? "[&>div]:bg-amber-500" : "[&>div]:bg-primary"
+                    <Card className="bg-card border-border mt-6">
+                        <CardHeader>
+                            <CardTitle className="text-lg text-foreground">Category Breakdown</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-6">
+                                {budgets.length > 0 ? budgets.map((budget) => (
+                                    <div key={budget.id} className="space-y-2">
+                                        <div className="flex justify-between items-center">
+                                            <div className="flex items-center gap-2">
+                                                <span className="font-medium text-foreground">{budget.category}</span>
+                                                {budget.status === 'exceeded' && (
+                                                    <Badge className="bg-red-500/10 text-red-400 border-red-500/30 hover:bg-red-500/20">
+                                                        Over Budget
+                                                    </Badge>
                                                 )}
-                                            />
+                                                {budget.status === 'warning' && (
+                                                    <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/30 hover:bg-amber-500/20">
+                                                        Warning
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                            <div className="text-sm">
+                                                <span className="text-foreground font-semibold">₹{budget.spent.toLocaleString()}</span>
+                                                <span className="text-muted-foreground ml-1">of ₹{budget.limit.toLocaleString()}</span>
+                                            </div>
                                         </div>
-                                    )) : (
-                                        <div className="text-center py-12">
-                                            <p className="text-4xl mb-3">⚖️</p>
-                                            <h3 className="text-lg font-medium text-foreground mb-2">No budgets set</h3>
-                                            <p className="text-sm text-muted-foreground">
-                                                Set category-wise spending limits to better manage your money.
-                                            </p>
+                                        <Progress
+                                            value={Math.min(budget.percentage, 100)}
+                                            className={cn(
+                                                "h-2 bg-secondary",
+                                                budget.status === 'exceeded' ? "bg-red-500/20" : budget.status === 'warning' ? "bg-amber-500/20" : "",
+                                                // The indicator styling is now part of the main className
+                                                budget.status === 'exceeded' ? "[&>div]:bg-red-500" : budget.status === 'warning' ? "[&>div]:bg-amber-500" : "[&>div]:bg-primary"
+                                            )}
+                                        />
+                                    </div>
+                                )) : (
+                                    <div className="text-center py-12">
+                                        <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                                            <IndianRupee className="w-8 h-8 text-muted-foreground" />
                                         </div>
-                                    )}
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                                        <h3 className="text-lg font-medium text-foreground mb-2">No budgets set</h3>
+                                        <p className="text-muted-foreground mb-4">
+                                            Set category-wise spending limits to better manage your money.
+                                        </p>
+                                        <Button onClick={() => setIsDialogOpen(true)} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                                            <Plus className="w-4 h-4 mr-2" />
+                                            Set Budget
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
                 </>
             )}
 
