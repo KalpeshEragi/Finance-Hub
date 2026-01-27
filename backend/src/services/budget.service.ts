@@ -112,8 +112,9 @@ export async function getBudgets(
     month: number = new Date().getMonth() + 1,
     year: number = new Date().getFullYear()
 ): Promise<BudgetWithSpending[]> {
+    // FIX: Convert userId string to ObjectId - MongoDB stores userId as ObjectId
     const budgets = await Budget.find({
-        userId,
+        userId: new mongoose.Types.ObjectId(userId),
         month,
         year,
     });
