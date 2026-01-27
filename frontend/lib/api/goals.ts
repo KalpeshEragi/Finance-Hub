@@ -31,6 +31,10 @@ export interface Goal {
     progress: number;
     status: 'on_track' | 'behind' | 'achieved';
     createdAt: string;
+    /** @added FIX: Goal Color Persistence - now stored in DB */
+    color?: string;
+    /** @added FIX: Goal Icon Persistence - now stored in DB */
+    icon?: string;
 }
 
 /**
@@ -45,6 +49,10 @@ export interface CreateGoalInput {
     category?: string;
     priority?: number;
     monthlyContribution?: number;
+    /** @added FIX: Goal Color Persistence */
+    color?: string;
+    /** @added FIX: Goal Icon Persistence */
+    icon?: string;
 }
 
 /**

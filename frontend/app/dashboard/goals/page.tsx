@@ -43,13 +43,21 @@ export default function GoalsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
+  /**
+   * Maps backend goal response to frontend Goal interface.
+   * 
+   * FIX: Goal Color/Icon Persistence Bug
+   * Now uses color/icon from backend if available, falls back to category-based
+   * styling only for legacy goals that don't have color/icon stored.
+   */
   const mapBackendGoal = useCallback((bg: BackendGoal): Goal => {
-    const style = CATEGORY_MAP[bg.category || ""] || DEFAULT_STYLE
+    const categoryStyle = CATEGORY_MAP[bg.category || ""] || DEFAULT_STYLE
     return {
       id: bg.id,
       name: bg.title,
-      icon: style.icon,
-      color: style.color,
+      // FIX: Use backend values first, fallback to category style for legacy goals
+      icon: bg.icon || categoryStyle.icon,
+      color: bg.color || categoryStyle.color,
       category: bg.category || "Other",
       targetAmount: bg.targetAmount,
       savedAmount: bg.currentAmount,
@@ -97,12 +105,18 @@ export default function GoalsPage() {
       deadline.setFullYear(deadline.getFullYear() + newGoal.duration)
     }
 
+    /**
+     * FIX: Goal Color/Icon Persistence Bug
+     * Now sending color and icon to backend so they persist across page reloads.
+     */
     try {
       const { data } = await createGoal({
         title: newGoal.name,
         targetAmount: newGoal.targetAmount,
         deadline: deadline.toISOString(),
         category: newGoal.category,
+        color: newGoal.color,
+        icon: newGoal.icon,
       })
 
       setGoals(prev => [...prev, mapBackendGoal(data)])

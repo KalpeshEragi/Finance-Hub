@@ -60,6 +60,18 @@ export interface IGoalBase {
 
     /** Associated category (optional) */
     category?: string;
+
+    /**
+     * Optional color for goal visualization (hex code).
+     * @added FIX: Goal Color Persistence Bug
+     */
+    color?: string;
+
+    /**
+     * Optional icon emoji for goal visualization.
+     * @added FIX: Goal Icon Persistence Bug
+     */
+    icon?: string;
 }
 
 /**
@@ -180,6 +192,33 @@ const goalSchema = new Schema<IGoal>(
             type: String,
             trim: true,
             maxlength: [50, 'Category cannot exceed 50 characters'],
+        },
+
+        /**
+         * Optional color for goal visualization.
+         * Hex color code (e.g., "#10b981") selected by user when creating goal.
+         * 
+         * @added FIX: Goal Color Persistence Bug
+         * Previously, color was derived from category on frontend, causing
+         * user-selected colors to be lost after page reload.
+         */
+        color: {
+            type: String,
+            trim: true,
+            maxlength: [20, 'Color cannot exceed 20 characters'],
+        },
+
+        /**
+         * Optional icon emoji for goal visualization.
+         * Emoji string (e.g., "🚗") selected by user when creating goal.
+         * 
+         * @added FIX: Goal Icon Persistence Bug
+         * Previously, icon was derived from category on frontend.
+         */
+        icon: {
+            type: String,
+            trim: true,
+            maxlength: [10, 'Icon cannot exceed 10 characters'],
         },
     },
     {

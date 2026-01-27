@@ -26,6 +26,10 @@ interface GoalInput {
     priority?: number;
     category?: string;
     currentAmount?: number;
+    /** @added FIX: Goal Color Persistence */
+    color?: string;
+    /** @added FIX: Goal Icon Persistence */
+    icon?: string;
 }
 
 interface GoalUpdate {
@@ -37,6 +41,10 @@ interface GoalUpdate {
     priority?: number;
     category?: string;
     status?: GoalStatus;
+    /** @added FIX: Goal Color Persistence */
+    color?: string;
+    /** @added FIX: Goal Icon Persistence */
+    icon?: string;
 }
 
 interface GoalPublic {
@@ -53,6 +61,10 @@ interface GoalPublic {
     daysRemaining: number;
     isOverdue: boolean;
     createdAt: Date;
+    /** @added FIX: Goal Color Persistence */
+    category?: string;
+    color?: string;
+    icon?: string;
 }
 
 // =============================================================================
@@ -78,6 +90,9 @@ export async function createGoal(userId: string, input: GoalInput): Promise<Goal
         priority: input.priority || 5,
         category: input.category,
         status: GOAL_STATUS.ACTIVE,
+        // FIX: Goal Color/Icon Persistence - now saved to DB
+        color: input.color,
+        icon: input.icon,
     });
 
     return formatGoalForResponse(goal);
@@ -284,6 +299,10 @@ function formatGoalForResponse(goal: IGoal): GoalPublic {
         daysRemaining,
         isOverdue: goal.status === 'active' && daysRemaining < 0,
         createdAt: goal.createdAt,
+        // FIX: Goal Color/Icon Persistence - now returned from DB
+        category: goal.category,
+        color: goal.color,
+        icon: goal.icon,
     };
 }
 
