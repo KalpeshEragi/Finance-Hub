@@ -40,6 +40,7 @@ import categorizationRoutes from './routes/categorization.routes';
 import paymentMethodsRoutes from './routes/paymentMethods.routes';
 import recurringRoutes from './routes/recurring.routes';
 import investmentRoutes from './routes/investment.routes';
+import loansRoutes from './routes/loans.routes';
 import { getRegisteredRoutes } from './utils/routeRegistry'
 
 // Import middleware
@@ -190,6 +191,9 @@ function createApp(): Express {
 
     // Investment holdings (protected)
     app.use('/investments', investmentRoutes);
+
+    // Loans / Debt management (protected)
+    app.use('/loans', loansRoutes);
 
     // ===========================================================================
     // DEVELOPMENT UTILITIES
