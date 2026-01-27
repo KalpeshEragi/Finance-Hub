@@ -87,11 +87,29 @@ export const getAlerts = asyncHandler(async (req: Request, res: Response) => {
     });
 });
 
+/**
+ * @controller getAdvice
+ * @route GET /budget/advice
+ * @description Gets AI-powered budget advice.
+ * @auth Required
+ */
+export const getAdvice = asyncHandler(async (req: Request, res: Response) => {
+    const userId = req.user!.userId;
+
+    const result = await budgetService.getBudgetAdvice(userId);
+
+    res.status(HTTP_STATUS.OK).json({
+        success: true,
+        data: result,
+    });
+});
+
 export const budgetController = {
     create,
     getAll,
     getSummary,
     getAlerts,
+    getAdvice,
 };
 
 export default budgetController;

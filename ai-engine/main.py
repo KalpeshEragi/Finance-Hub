@@ -66,6 +66,7 @@ from app.routers import (
     digital_twin,
     alerts,
     parse,
+    budget,
 )
 
 # =============================================================================
@@ -124,6 +125,9 @@ app.include_router(alerts.router, prefix="/alerts", tags=["Alerts"])
 
 # Document parsing (bank statements)
 app.include_router(parse.router, prefix="/parse", tags=["Document Parsing"])
+
+# Budget Agent
+app.include_router(budget.router, prefix="/budget", tags=["Budget Agent"])
 
 # =============================================================================
 # ROOT ENDPOINT

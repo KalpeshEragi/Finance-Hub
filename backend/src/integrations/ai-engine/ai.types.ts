@@ -277,3 +277,31 @@ export type AIEngineResponse<T> = T | AIEngineError;
 export default {
     // Types are only exported, not values
 };
+
+// =============================================================================
+// BUDGET AGENT TYPES
+// =============================================================================
+
+export interface BudgetAnalysisRequest {
+    transactions: CategoryTransactionInput[];
+    user_id: string;
+}
+
+export interface BudgetRecommendation {
+    category: string;
+    current_spending: number;
+    recommended_limit: number;
+    potential_savings: number;
+    reason: string;
+    action_item: string;
+    priority: number;
+}
+
+export interface BudgetAnalysisResponse {
+    total_spending: number;
+    needs_spending: number;
+    wants_spending: number;
+    savings_spending: number;
+    recommendations: BudgetRecommendation[];
+    estimated_monthly_savings: number;
+}

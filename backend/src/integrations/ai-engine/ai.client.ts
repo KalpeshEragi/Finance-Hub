@@ -32,6 +32,7 @@ import type {
     TaxSuggestionResponse,
     SpendingAnalysisRequest,
     SpendingAnalysisResponse,
+    BudgetAnalysisResponse,
     AIEngineError,
 } from './ai.types';
 
@@ -319,6 +320,40 @@ async function analyzeSpending(
     }
 }
 
+
+
+/**
+ * @function analyzeBudget
+ * @description Gets budget recommendations from AI Engine.
+ * 
+ * @param transactions - List of transactions
+ * @param userId - User ID
+ * @returns Budget analysis and recommendations
+ */
+async function analyzeBudget(
+    transactions: CategoryTransactionInput[],
+    userId: string
+): Promise<BudgetAnalysisResponse> {
+    try {
+        const response = await client.post<BudgetAnalysisResponse>('/budget/analyze', {
+            transactions,
+            user_id: userId
+        });
+        return response.data;
+    } catch (error) {
+        console.warn('AI Engine unavailable for budget analysis', error);
+        // Return empty analysis on error
+        return {
+            total_spending: 0,
+            needs_spending: 0,
+            wants_spending: 0,
+            savings_spending: 0,
+            recommendations: [],
+            estimated_monthly_savings: 0,
+        };
+    }
+}
+
 // =============================================================================
 // HEALTH CHECK
 // =============================================================================
@@ -362,6 +397,7 @@ export const aiClient = {
     categorize,
     getTaxSuggestions,
     analyzeSpending,
+    analyzeBudget,
     checkHealth,
 };
 

@@ -20,6 +20,8 @@ import Alert from '../models/alert.model';
 import { AppError } from '../middleware/error.middleware';
 import { HTTP_STATUS, ERROR_MESSAGES, ALERT_TYPES, DEFAULTS } from '../config/constants';
 import { getMonthRange, getCurrentMonthRange } from '../utils/date';
+import { aiClient } from '../integrations/ai-engine/ai.client';
+import { CategoryTransactionInput } from '../integrations/ai-engine/ai.types';
 
 // =============================================================================
 // TYPES
@@ -213,6 +215,129 @@ export async function checkBudgetAlerts(userId: string): Promise<{ alertsCreated
     return { alertsCreated };
 }
 
+/**
+ * @function getBudgetAdvice
+ * @description Gets personalized budget advice and savings recommendations.
+ * 
+ * TEMPORARY: Uses local rule-based logic instead of AI Engine.
+ * TODO: Reconnect to AI Engine after hackathon deadline.
+ * 
+ * @param userId - User ID
+ * @returns Budget analysis with recommendations
+ */
+export async function getBudgetAdvice(userId: string) {
+    const { start, end } = getCurrentMonthRange();
+
+    // 1. Fetch recent transactions (current month)
+    const transactions = await Transaction.find({
+        userId,
+        date: { $gte: start, $lte: end },
+        type: 'expense'
+    });
+
+    if (transactions.length === 0) {
+        return {
+            total_spending: 0,
+            needs_spending: 0,
+            wants_spending: 0,
+            savings_spending: 0,
+            recommendations: [],
+            estimated_monthly_savings: 0,
+            message: "No transactions found for analysis this month."
+        };
+    }
+
+    // 2. Local Rule-Based Analysis (Temporary - bypassing AI Engine)
+    // Categorize spending into buckets
+    const NEEDS_CATEGORIES = ['Groceries', 'Bills & Utilities', 'Rent', 'EMI', 'Insurance', 'Healthcare', 'Education'];
+    const WANTS_CATEGORIES = ['Food & Dining', 'Shopping', 'Entertainment', 'Travel', 'Other'];
+    const SAVINGS_CATEGORIES = ['Savings', 'Investment'];
+
+    let needsSpending = 0;
+    let wantsSpending = 0;
+    let savingsSpending = 0;
+    const categoryTotals: Record<string, number> = {};
+
+    for (const t of transactions) {
+        const category = t.category || 'Other';
+        const amount = t.amount;
+
+        // Aggregate by category
+        categoryTotals[category] = (categoryTotals[category] || 0) + amount;
+
+        // Bucket assignment
+        if (NEEDS_CATEGORIES.includes(category)) {
+            needsSpending += amount;
+        } else if (SAVINGS_CATEGORIES.includes(category)) {
+            savingsSpending += amount;
+        } else {
+            wantsSpending += amount;
+        }
+    }
+
+    const totalSpending = needsSpending + wantsSpending + savingsSpending;
+
+    // 3. Generate Recommendations (Rule-Based)
+    const recommendations: Array<{
+        category: string;
+        current_spending: number;
+        recommended_limit: number;
+        potential_savings: number;
+        reason: string;
+        action_item: string;
+        priority: number;
+    }> = [];
+
+    const REDUCTION_PERCENT = 0.15; // 15% reduction target
+    const MIN_THRESHOLD = 500; // Only recommend for categories > ₹500
+
+    // Sort "Wants" categories by spending (highest first)
+    const wantsCategorySpending = Object.entries(categoryTotals)
+        .filter(([cat]) => WANTS_CATEGORIES.includes(cat) || !NEEDS_CATEGORIES.includes(cat))
+        .filter(([, amount]) => amount >= MIN_THRESHOLD)
+        .sort(([, a], [, b]) => b - a);
+
+    // Generate top 3 recommendations
+    let priority = 1;
+    for (const [category, amount] of wantsCategorySpending.slice(0, 3)) {
+        const potentialSavings = Math.round(amount * REDUCTION_PERCENT);
+        const recommendedLimit = Math.round(amount * (1 - REDUCTION_PERCENT));
+
+        recommendations.push({
+            category,
+            current_spending: amount,
+            recommended_limit: recommendedLimit,
+            potential_savings: potentialSavings,
+            reason: `You spent ₹${amount.toLocaleString()} on ${category} this month. This is a discretionary expense that can be optimized.`,
+            action_item: `Try to limit ${category} spending to ₹${recommendedLimit.toLocaleString()} next month.`,
+            priority: priority++,
+        });
+    }
+
+    const estimatedMonthlySavings = recommendations.reduce((sum, r) => sum + r.potential_savings, 0);
+
+    return {
+        total_spending: totalSpending,
+        needs_spending: needsSpending,
+        wants_spending: wantsSpending,
+        savings_spending: savingsSpending,
+        recommendations,
+        estimated_monthly_savings: estimatedMonthlySavings,
+    };
+
+    // =========================================================================
+    // FUTURE: Uncomment below to use AI Engine instead of local logic
+    // =========================================================================
+    // const aiTransactions: CategoryTransactionInput[] = transactions.map(t => ({
+    //     id: t._id.toString(),
+    //     description: t.description,
+    //     merchant: t.merchantName,
+    //     amount: t.amount,
+    //     type: 'expense'
+    // }));
+    // return await aiClient.analyzeBudget(aiTransactions, userId);
+}
+
 // =============================================================================
 // HELPER FUNCTIONS
 // =============================================================================
@@ -281,6 +406,7 @@ export const budgetService = {
     getBudgets,
     getBudgetSummary,
     checkBudgetAlerts,
+    getBudgetAdvice,
 };
 
 export default budgetService;

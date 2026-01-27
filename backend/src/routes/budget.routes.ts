@@ -46,4 +46,11 @@ router.get('/summary', budgetController.getSummary);
  */
 router.get('/alerts', budgetController.getAlerts);
 
+/**
+ * @route GET /budget/advice
+ * @description Get AI-powered budget advice
+ * @access Private
+ */
+router.get('/advice', budgetController.getAdvice);
+
 export default router;
