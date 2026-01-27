@@ -4,10 +4,16 @@ export interface IInvestmentHolding extends Document {
     userId: Types.ObjectId;
     name: string;
     symbol: string;
-    type: 'stock' | 'mutual_fund' | 'crypto' | 'gold' | 'fd' | 'other';
+    type: 'stock' | 'mutual_fund' | 'ppf' | 'other';
     quantity: number;
     averagePrice: number;
     currentPrice: number;
+    // New fields for Investment Agent
+    amount: number;
+    investmentDate: Date;
+    investmentMode: 'sip' | 'lumpsum' | 'stp';
+    sipFrequency?: 'weekly' | 'monthly' | 'yearly';
+    schemeType?: 'PPF' | 'NPS' | 'EPF' | 'ELSS';
     lastUpdated: Date;
     createdAt: Date;
     updatedAt: Date;
@@ -34,13 +40,14 @@ const investmentSchema = new Schema<IInvestmentHolding>(
         },
         type: {
             type: String,
-            enum: ['stock', 'mutual_fund', 'crypto', 'gold', 'fd', 'other'],
+            enum: ['stock', 'mutual_fund', 'ppf', 'other'],
             required: true,
         },
         quantity: {
             type: Number,
             required: true,
             min: 0,
+            default: 1,
         },
         averagePrice: {
             type: Number,
@@ -51,6 +58,29 @@ const investmentSchema = new Schema<IInvestmentHolding>(
             type: Number,
             required: true,
             min: 0,
+        },
+        // New Investment Agent fields
+        amount: {
+            type: Number,
+            min: 0,
+            default: 0,
+        },
+        investmentDate: {
+            type: Date,
+            default: Date.now,
+        },
+        investmentMode: {
+            type: String,
+            enum: ['sip', 'lumpsum', 'stp'],
+            default: 'lumpsum',
+        },
+        sipFrequency: {
+            type: String,
+            enum: ['weekly', 'monthly', 'yearly'],
+        },
+        schemeType: {
+            type: String,
+            enum: ['PPF', 'NPS', 'EPF', 'ELSS'],
         },
         lastUpdated: {
             type: Date,
@@ -72,3 +102,4 @@ const investmentSchema = new Schema<IInvestmentHolding>(
 );
 
 export default mongoose.model<IInvestmentHolding>('InvestmentHolding', investmentSchema);
+

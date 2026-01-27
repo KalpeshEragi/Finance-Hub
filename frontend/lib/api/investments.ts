@@ -9,10 +9,16 @@ export interface InvestmentHolding {
     id: string;
     name: string;
     symbol: string;
-    type: 'stock' | 'mutual_fund' | 'crypto' | 'gold' | 'fd' | 'other';
+    type: 'stock' | 'mutual_fund' | 'ppf' | 'other';
     quantity: number;
     averagePrice: number;
     currentPrice: number;
+    // New Investment Agent fields
+    amount?: number;
+    investmentDate?: string;
+    investmentMode?: 'sip' | 'lumpsum' | 'stp';
+    sipFrequency?: 'weekly' | 'monthly' | 'yearly';
+    schemeType?: 'PPF' | 'NPS' | 'EPF' | 'ELSS';
     lastUpdated: string;
 }
 
@@ -61,7 +67,7 @@ export async function getInvestments(): Promise<InvestmentResponse> {
     return data;
 }
 
-export async function createInvestment(investment: Omit<InvestmentHolding, 'id' | 'lastUpdated'>): Promise<{ success: boolean; data: InvestmentHolding }> {
+export async function createInvestment(investment: Record<string, any>): Promise<{ success: boolean; data: InvestmentHolding }> {
     const response = await fetch(`${API_BASE_URL}/investments`, {
         method: 'POST',
         headers: getAuthHeaders(),

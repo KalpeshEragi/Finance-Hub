@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import InvestmentHolding from '../models/investment.model';
+import Transaction from '../models/transaction.model';
 import { HTTP_STATUS, SUCCESS_MESSAGES } from '../config/constants';
 import { AppError } from '../middleware/error.middleware';
 
@@ -35,13 +36,32 @@ export async function getInvestments(req: Request, res: Response, next: NextFunc
 
 /**
  * Create a new investment holding
+ * Also creates a Transaction record (ledger-first architecture)
  */
 export async function createInvestment(req: Request, res: Response, next: NextFunction) {
     try {
+        const userId = req.user?.userId;
+
+        // Create investment holding
         const investment = await InvestmentHolding.create({
             ...req.body,
-            userId: req.user?.userId,
+            userId,
         });
+
+        // Create ledger transaction entry (ledger-first architecture)
+        const investmentAmount = req.body.amount || (req.body.averagePrice * (req.body.quantity || 1));
+        await Transaction.create({
+            userId,
+            amount: investmentAmount,
+            type: 'expense',
+            category: 'Investment',
+            description: `Investment: ${investment.name}`,
+            merchant: investment.name,
+            date: req.body.investmentDate || new Date(),
+            investmentId: investment._id,
+            isAutoCategorized: true,
+        });
+
         res.status(HTTP_STATUS.CREATED).json({ success: true, data: investment });
     } catch (error) {
         next(error);

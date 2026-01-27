@@ -6,6 +6,7 @@ import { PortfolioSummaryCard } from "@/components/investments/portfolio-summary
 import { HoldingsList } from "@/components/investments/holdings-list"
 import { MarketIndices } from "@/components/investments/market-indices"
 import { MutualFundsCard } from "@/components/investments/mutual-funds-card"
+import { AddAssetDialog } from "@/components/investments/add-asset-dialog"
 import { getInvestments, type InvestmentHolding, type InvestmentSummary } from "@/lib/api/investments"
 import { useToast } from "@/components/ui/use-toast"
 import { Loader2, Plus } from "lucide-react"
@@ -20,6 +21,7 @@ export default function InvestmentsPage() {
     returnsPercentage: 0
   })
   const [isLoading, setIsLoading] = useState(true)
+  const [isAddAssetOpen, setIsAddAssetOpen] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -59,6 +61,13 @@ export default function InvestmentsPage() {
 
   return (
     <>
+      {/* Add Asset Dialog */}
+      <AddAssetDialog
+        open={isAddAssetOpen}
+        onOpenChange={setIsAddAssetOpen}
+        onSuccess={fetchInvestments}
+      />
+
       <div className="mb-6 flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-semibold text-foreground">Investments</h1>
@@ -66,12 +75,7 @@ export default function InvestmentsPage() {
         </div>
         <div className="flex gap-2">
           {isLoading && <Loader2 className="w-5 h-5 animate-spin text-muted-foreground self-center" />}
-          <Button onClick={() => {
-            toast({
-              title: "Coming Soon",
-              description: "Add asset feature is being implemented.",
-            })
-          }}>
+          <Button onClick={() => setIsAddAssetOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Asset
           </Button>
