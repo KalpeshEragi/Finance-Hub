@@ -41,6 +41,8 @@ import paymentMethodsRoutes from './routes/paymentMethods.routes';
 import recurringRoutes from './routes/recurring.routes';
 import investmentRoutes from './routes/investment.routes';
 import loansRoutes from './routes/loans.routes';
+import emergencyShieldRoutes from './routes/emergency-shield.routes';
+import balanceRoutes from './routes/balance.routes';
 import { getRegisteredRoutes } from './utils/routeRegistry'
 
 // Import middleware
@@ -194,6 +196,12 @@ function createApp(): Express {
 
     // Loans / Debt management (protected)
     app.use('/loans', loansRoutes);
+
+    // Emergency Shield - Central Safety Controller (protected)
+    app.use('/emergency-shield', emergencyShieldRoutes);
+
+    // Balance - Ledger-Correct Accounting (protected)
+    app.use('/balance', balanceRoutes);
 
     // ===========================================================================
     // DEVELOPMENT UTILITIES

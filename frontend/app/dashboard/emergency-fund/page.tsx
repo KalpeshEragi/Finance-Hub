@@ -1,10 +1,21 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+/**
+ * @file emergency-fund/page.tsx
+ * @description Emergency Fund Safety Shield page (Ledger-Correct Two-Tier System)
+ * 
+ * Shows:
+ * 1. Ledger Balance (Net vs Allocated vs Free)
+ * 2. Shield Status (Core Locked vs Surplus Flexible)
+ * 3. Feature Access Permissions
+ * 4. Surplus Recommendations (if >6 months)
+ */
+
+import { useState, useEffect } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -12,232 +23,300 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Shield,
+  ShieldCheck,
+  ShieldAlert,
   Plus,
-  Calendar,
   TrendingUp,
   Wallet,
   Clock,
-  MoreHorizontal,
-  Sparkles,
   AlertTriangle,
-  PiggyBank,
-  IndianRupee,
-  History,
-  Lightbulb,
-  ArrowUpRight,
   Heart,
   Home,
   Briefcase,
   Car,
-} from "lucide-react"
-import { cn } from "@/lib/utils"
+  Target,
+  Sparkles,
+  Lock as LockIcon,
+  Unlock,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import {
+  EmergencyShieldStatus,
+  getEmergencyShieldStatus,
+  createEmergencyFund,
+  contributeToFund,
+  getShieldStatusColor,
+  formatCurrency,
+  CreateEmergencyFundInput,
+  getSurplusRecommendations,
+  SurplusRecommendation,
+  reallocateWithinEmergency,
+} from "@/lib/api/emergency-shield";
 
-interface EmergencyFund {
-  id: string
-  name: string
-  targetAmount: number
-  savedAmount: number
-  monthlyContribution: number
-  startDate: Date
-  lastContribution: Date | null
-  contributions: { date: Date; amount: number }[]
-  icon: string
-}
+// New Components
+import { BalanceCard } from "./balance-card";
+import { SurplusPanel } from "./surplus-panel";
 
-const initialFunds: EmergencyFund[] = [
-  {
-    id: "ef1",
-    name: "Medical Emergency",
-    targetAmount: 300000,
-    savedAmount: 175000,
-    monthlyContribution: 15000,
-    startDate: new Date(2025, 3, 1),
-    lastContribution: new Date(2026, 0, 10),
-    icon: "medical",
-    contributions: [
-      { date: new Date(2026, 0, 10), amount: 15000 },
-      { date: new Date(2025, 11, 10), amount: 15000 },
-      { date: new Date(2025, 10, 10), amount: 15000 },
-      { date: new Date(2025, 9, 10), amount: 15000 },
-      { date: new Date(2025, 8, 10), amount: 15000 },
-    ],
-  },
-  {
-    id: "ef2",
-    name: "Job Loss Fund",
-    targetAmount: 500000,
-    savedAmount: 225000,
-    monthlyContribution: 20000,
-    startDate: new Date(2025, 6, 1),
-    lastContribution: new Date(2026, 0, 5),
-    icon: "job",
-    contributions: [
-      { date: new Date(2026, 0, 5), amount: 20000 },
-      { date: new Date(2025, 11, 5), amount: 20000 },
-      { date: new Date(2025, 10, 5), amount: 20000 },
-    ],
-  },
-  {
-    id: "ef3",
-    name: "Home Repairs",
-    targetAmount: 200000,
-    savedAmount: 85000,
-    monthlyContribution: 10000,
-    startDate: new Date(2025, 9, 1),
-    lastContribution: new Date(2026, 0, 8),
-    icon: "home",
-    contributions: [
-      { date: new Date(2026, 0, 8), amount: 10000 },
-      { date: new Date(2025, 11, 8), amount: 10000 },
-    ],
-  },
-]
+// =============================================================================
+// ICON MAPPING
+// =============================================================================
 
 const fundIcons = {
   medical: Heart,
-  job: Briefcase,
+  job_loss: Briefcase,
   home: Home,
   vehicle: Car,
   general: Shield,
-}
+};
 
 const iconOptions = [
   { value: "medical", label: "Medical", icon: Heart },
-  { value: "job", label: "Job Loss", icon: Briefcase },
+  { value: "job_loss", label: "Job Loss", icon: Briefcase },
   { value: "home", label: "Home", icon: Home },
   { value: "vehicle", label: "Vehicle", icon: Car },
   { value: "general", label: "General", icon: Shield },
-]
+] as const;
+
+// =============================================================================
+// MAIN COMPONENT
+// =============================================================================
 
 export default function EmergencyFundPage() {
-  const [funds, setFunds] = useState<EmergencyFund[]>(initialFunds)
-  const [showAddFund, setShowAddFund] = useState(false)
-  const [showContribute, setShowContribute] = useState<string | null>(null)
-  const [newFund, setNewFund] = useState({ name: "", targetAmount: "", monthlyContribution: "", icon: "general" })
-  const [contributeAmount, setContributeAmount] = useState("")
+  const [shieldStatus, setShieldStatus] = useState<EmergencyShieldStatus | null>(null);
+  const [surplusRecs, setSurplusRecs] = useState<SurplusRecommendation[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Calculate totals
-  const totalSaved = funds.reduce((sum, f) => sum + f.savedAmount, 0)
-  const totalTarget = funds.reduce((sum, f) => sum + f.targetAmount, 0)
-  const totalMonthly = funds.reduce((sum, f) => sum + f.monthlyContribution, 0)
+  // Dialog States
+  const [showAddFund, setShowAddFund] = useState(false);
+  const [showContribute, setShowContribute] = useState<string | null>(null);
 
-  // Calculate duration since earliest start date
-  const earliestStart = funds.length > 0 ? new Date(Math.min(...funds.map((f) => f.startDate.getTime()))) : new Date()
-  const daysSaving = Math.floor((new Date().getTime() - earliestStart.getTime()) / (1000 * 60 * 60 * 24))
-  const monthsSaving = Math.floor(daysSaving / 30)
-  const yearsSaving = Math.floor(monthsSaving / 12)
-  const remainingMonths = monthsSaving % 12
+  // Form States
+  const [newFund, setNewFund] = useState<CreateEmergencyFundInput>({
+    name: "",
+    targetAmount: 0,
+    type: "general",
+  });
+  const [contributeAmount, setContributeAmount] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [contributeError, setContributeError] = useState<string | null>(null);
 
-  const formatDuration = () => {
-    if (yearsSaving > 0) {
-      return `${yearsSaving} year${yearsSaving > 1 ? "s" : ""} ${remainingMonths} month${remainingMonths !== 1 ? "s" : ""}`
-    }
-    if (monthsSaving > 0) {
-      return `${monthsSaving} month${monthsSaving > 1 ? "s" : ""}`
-    }
-    return `${daysSaving} day${daysSaving !== 1 ? "s" : ""}`
-  }
+  // Global "Add from Free Balance → Emergency Fund" form
+  const [globalFundId, setGlobalFundId] = useState<string | null>(null);
+  const [globalAmount, setGlobalAmount] = useState("");
+  const [globalError, setGlobalError] = useState<string | null>(null);
+  const [globalSubmitting, setGlobalSubmitting] = useState(false);
 
-  // Get all contributions across funds for history
-  const allContributions = funds
-    .flatMap((fund) =>
-      fund.contributions.map((c) => ({
-        fundId: fund.id,
-        fundName: fund.name,
-        fundIcon: fund.icon,
-        amount: c.amount,
-        date: c.date,
-      })),
-    )
-    .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .slice(0, 10)
+  // Load data
+  useEffect(() => {
+    loadData();
+  }, []);
 
-  const handleAddFund = () => {
-    if (newFund.name && newFund.targetAmount && newFund.monthlyContribution) {
-      const fund: EmergencyFund = {
-        id: `ef-${Date.now()}`,
-        name: newFund.name,
-        targetAmount: Number.parseFloat(newFund.targetAmount),
-        savedAmount: 0,
-        monthlyContribution: Number.parseFloat(newFund.monthlyContribution),
-        startDate: new Date(),
-        lastContribution: null,
-        icon: newFund.icon,
-        contributions: [],
+  async function loadData() {
+    try {
+      setLoading(true);
+      const data = await getEmergencyShieldStatus();
+      setShieldStatus(data);
+
+      // Load surplus recommendations if applicable
+      if (data.hasSurplus) {
+        const recs = await getSurplusRecommendations();
+        setSurplusRecs(recs);
+      } else {
+        setSurplusRecs([]);
       }
-      setFunds([...funds, fund])
-      setNewFund({ name: "", targetAmount: "", monthlyContribution: "", icon: "general" })
-      setShowAddFund(false)
+
+      setError(null);
+    } catch (err) {
+      setError("Failed to load emergency shield status");
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   }
 
-  const handleContribute = (fundId: string) => {
-    if (contributeAmount && Number.parseFloat(contributeAmount) > 0) {
-      setFunds(
-        funds.map((fund) => {
-          if (fund.id === fundId) {
-            return {
-              ...fund,
-              savedAmount: Math.min(fund.savedAmount + Number.parseFloat(contributeAmount), fund.targetAmount),
-              lastContribution: new Date(),
-              contributions: [...fund.contributions, { date: new Date(), amount: Number.parseFloat(contributeAmount) }],
-            }
-          }
-          return fund
-        }),
-      )
-      setContributeAmount("")
-      setShowContribute(null)
+  // Handle re-fetch without full loading state
+  async function refreshData() {
+    const data = await getEmergencyShieldStatus();
+    setShieldStatus(data);
+    if (data.hasSurplus) {
+      const recs = await getSurplusRecommendations();
+      setSurplusRecs(recs);
+    } else {
+      setSurplusRecs([]);
     }
   }
 
-  const handleDeleteFund = (fundId: string) => {
-    setFunds(funds.filter((f) => f.id !== fundId))
-  }
+  // Create new fund
+  async function handleAddFund() {
+    if (!newFund.name || !newFund.targetAmount) return;
 
-  const getHealthStatus = (fund: EmergencyFund) => {
-    const progress = (fund.savedAmount / fund.targetAmount) * 100
-    if (progress >= 100)
-      return {
-        label: "Fully Funded",
-        color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-        icon: Sparkles,
-      }
-    if (progress >= 75)
-      return { label: "Almost There", color: "bg-blue-500/20 text-blue-400 border-blue-500/30", icon: TrendingUp }
-    if (progress >= 50)
-      return { label: "Good Progress", color: "bg-primary/20 text-primary border-primary/30", icon: Shield }
-    if (progress >= 25)
-      return { label: "Building", color: "bg-amber-500/20 text-amber-400 border-amber-500/30", icon: PiggyBank }
-    return {
-      label: "Just Started",
-      color: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-      icon: AlertTriangle,
+    try {
+      setSubmitting(true);
+      await createEmergencyFund(newFund);
+      await refreshData();
+      setNewFund({ name: "", targetAmount: 0, type: "general" });
+      setShowAddFund(false);
+    } catch (err) {
+      console.error("Failed to create fund:", err);
+    } finally {
+      setSubmitting(false);
     }
   }
 
-  const quickAmounts = [1000, 2500, 5000, 10000]
+  // Per-fund internal redistribution (Emergency → Emergency)
+  async function handleContribute(fundId: string) {
+    if (!shieldStatus) return;
+    if (!contributeAmount || Number(contributeAmount) <= 0) return;
+
+    const amount = Number(contributeAmount);
+
+    // Choose a source emergency fund different from the target.
+    const sourceFund = shieldStatus.emergencyFunds
+      .filter((f) => f.id !== fundId)
+      .sort((a, b) => b.currentAmount - a.currentAmount)[0];
+
+    if (!sourceFund) {
+      setContributeError("You need at least one other emergency fund to reallocate from.");
+      return;
+    }
+
+    if (amount > sourceFund.currentAmount) {
+      setContributeError(
+        `You can move up to ${formatCurrency(
+          sourceFund.currentAmount
+        )} from ${sourceFund.name} into this fund.`
+      );
+      return;
+    }
+
+    try {
+      setSubmitting(true);
+      setContributeError(null);
+      const result = await reallocateWithinEmergency(sourceFund.id, fundId, amount);
+      setShieldStatus(result.shieldStatus);
+      setContributeAmount("");
+      setShowContribute(null);
+      await refreshData();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to redistribute emergency allocations";
+      setContributeError(message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Global Add from Free Balance → Emergency Fund
+  async function handleGlobalAdd() {
+    if (!shieldStatus) return;
+    if (!globalFundId) {
+      setGlobalError("Please select an emergency fund");
+      return;
+    }
+    const amount = Number(globalAmount);
+    if (!amount || amount <= 0) {
+      setGlobalError("Enter a positive amount");
+      return;
+    }
+
+    // Validate against available free balance and backend maxContribution hint
+    const maxAllowed = Math.min(
+      shieldStatus.freeBalance,
+      shieldStatus.maxContribution || shieldStatus.freeBalance
+    );
+    if (amount > maxAllowed) {
+      setGlobalError(
+        `You can allocate up to ${formatCurrency(
+          maxAllowed
+        )} from your Free Balance into emergency funds.`
+      );
+      return;
+    }
+
+    try {
+      setGlobalSubmitting(true);
+      setGlobalError(null);
+      const result = await contributeToFund(globalFundId, amount);
+      setShieldStatus(result.shieldStatus);
+      setGlobalAmount("");
+      // keep selected fund
+      await refreshData();
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to add to emergency fund";
+      setGlobalError(message);
+    } finally {
+      setGlobalSubmitting(false);
+    }
+  }
+
+  // Load Skeleton
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center gap-4">
+          <Skeleton className="w-14 h-14 rounded-xl" />
+          <div className="space-y-2">
+            <Skeleton className="w-48 h-6" />
+            <Skeleton className="w-64 h-4" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Skeleton className="w-full h-32 rounded-xl" />
+            <Skeleton className="w-full h-96 rounded-xl" />
+          </div>
+          <Skeleton className="w-full h-96 rounded-xl" />
+        </div>
+      </div>
+    );
+  }
+
+  // Error State
+  if (error || !shieldStatus) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] text-center">
+        <AlertTriangle className="w-16 h-16 text-amber-400 mb-4" />
+        <h2 className="text-xl font-semibold text-foreground mb-2">Could Not Load Shield Status</h2>
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <Button onClick={loadData}>Try Again</Button>
+      </div>
+    );
+  }
+
+  const colors = getShieldStatusColor(shieldStatus.status);
+  const ShieldIcon = shieldStatus.status === "safe" ? ShieldCheck : shieldStatus.status === "partial" ? Shield : ShieldAlert;
+  const quickAmounts = [1000, 2500, 5000, 10000];
+
+  // Two-Tier Logic for Display
+  const isFullyProtected = shieldStatus.coreProgressPercentage >= 100;
 
   return (
     <>
-      {/* Page Header */}
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
         <div className="flex items-center gap-4">
-          <div className="p-3 rounded-xl bg-amber-500/10">
-            <Shield className="w-8 h-8 text-amber-400" />
+          <div className={cn("p-3 rounded-xl", colors.bg)}>
+            <ShieldIcon className={cn("w-8 h-8", colors.text)} />
           </div>
           <div>
-            <h1 className="text-2xl font-semibold text-foreground">Emergency Fund</h1>
-            <p className="text-sm text-muted-foreground">Build your financial safety net for unexpected expenses</p>
+            <h1 className="text-2xl font-semibold text-foreground">Financial Safety Shield</h1>
+            <p className="text-sm text-muted-foreground">
+              {shieldStatus.status === "safe"
+                ? "You're protected — maintain your core shield or grow wealth"
+                : "Build your safety net before taking financial risks"}
+            </p>
           </div>
         </div>
+
         <Dialog open={showAddFund} onOpenChange={setShowAddFund}>
           <DialogTrigger asChild>
-            <Button className="bg-amber-500 hover:bg-amber-600 text-white">
+            <Button className={cn(colors.bg, colors.text, "border", colors.border, "hover:opacity-90")}>
               <Plus className="w-4 h-4 mr-2" />
               Create Fund
             </Button>
@@ -248,44 +327,42 @@ export default function EmergencyFundPage() {
                 <Shield className="w-5 h-5 text-amber-400" />
                 Create Emergency Fund
               </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                Set up a new emergency fund to protect yourself from unexpected expenses
+              <DialogDescription>
+                Build your financial safety shield with a new emergency fund
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 mt-4">
-              {/* Icon Selection */}
               <div className="space-y-2">
                 <label className="text-sm text-muted-foreground">Fund Type</label>
                 <div className="grid grid-cols-5 gap-2">
                   {iconOptions.map((option) => {
-                    const IconComponent = option.icon
+                    const IconComponent = option.icon;
                     return (
                       <button
                         key={option.value}
                         type="button"
-                        onClick={() => setNewFund({ ...newFund, icon: option.value })}
+                        onClick={() => setNewFund({ ...newFund, type: option.value })}
                         className={cn(
                           "flex flex-col items-center gap-1.5 p-3 rounded-lg border transition-all",
-                          newFund.icon === option.value
-                            ? "bg-amber-500/20 border-amber-500 text-amber-400"
-                            : "bg-secondary border-border text-muted-foreground hover:border-amber-500/50",
+                          newFund.type === option.value
+                            ? cn(colors.bg, colors.border, colors.text)
+                            : "bg-secondary border-border text-muted-foreground hover:border-primary/50"
                         )}
                       >
                         <IconComponent className="w-5 h-5" />
                         <span className="text-xs">{option.label}</span>
                       </button>
-                    )
+                    );
                   })}
                 </div>
               </div>
-
               <div className="space-y-2">
                 <label className="text-sm text-muted-foreground">Fund Name</label>
                 <Input
-                  placeholder="e.g., Medical Emergency, Job Loss Fund"
+                  placeholder="e.g., Medical Emergency"
                   value={newFund.name}
                   onChange={(e) => setNewFund({ ...newFund, name: e.target.value })}
-                  className="bg-secondary border-border text-foreground"
+                  className="bg-secondary border-border"
                 />
               </div>
               <div className="space-y-2">
@@ -293,447 +370,316 @@ export default function EmergencyFundPage() {
                 <Input
                   type="number"
                   placeholder="e.g., 300000"
-                  value={newFund.targetAmount}
-                  onChange={(e) => setNewFund({ ...newFund, targetAmount: e.target.value })}
-                  className="bg-secondary border-border text-foreground"
+                  value={newFund.targetAmount || ""}
+                  onChange={(e) => setNewFund({ ...newFund, targetAmount: Number(e.target.value) })}
+                  className="bg-secondary border-border"
                 />
-                <p className="text-xs text-muted-foreground">Recommended: 3-6 months of your monthly expenses</p>
+                <p className="text-xs text-muted-foreground">
+                  Minimum: {formatCurrency(shieldStatus.emergencyTarget)} (3 months)
+                </p>
               </div>
-              <div className="space-y-2">
-                <label className="text-sm text-muted-foreground">Monthly Contribution (₹)</label>
-                <Input
-                  type="number"
-                  placeholder="e.g., 10000"
-                  value={newFund.monthlyContribution}
-                  onChange={(e) => setNewFund({ ...newFund, monthlyContribution: e.target.value })}
-                  className="bg-secondary border-border text-foreground"
-                />
-                {newFund.targetAmount && newFund.monthlyContribution && (
-                  <p className="text-xs text-amber-400">
-                    You'll reach your goal in approximately{" "}
-                    {Math.ceil(
-                      Number.parseFloat(newFund.targetAmount) / Number.parseFloat(newFund.monthlyContribution),
-                    )}{" "}
-                    months
-                  </p>
-                )}
-              </div>
-
-              <div className="flex gap-3 mt-6">
-                <Button
-                  variant="outline"
-                  className="flex-1 border-border bg-transparent"
-                  onClick={() => setShowAddFund(false)}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="flex-1 bg-amber-500 hover:bg-amber-600 text-white"
-                  onClick={handleAddFund}
-                  disabled={!newFund.name || !newFund.targetAmount || !newFund.monthlyContribution}
-                >
-                  Create Fund
-                </Button>
-              </div>
+              <Button onClick={handleAddFund} disabled={submitting} className="w-full mt-4">
+                {submitting ? "Creating..." : "Create Fund"}
+              </Button>
             </div>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Overview Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <Card className="bg-gradient-to-br from-amber-500/10 to-amber-600/5 border-amber-500/20">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-amber-500/20">
-                <Wallet className="w-5 h-5 text-amber-400" />
-              </div>
-              <span className="text-sm text-muted-foreground">Total Saved</span>
-            </div>
-            <p className="text-3xl font-bold text-foreground">₹{totalSaved.toLocaleString("en-IN")}</p>
-            <div className="flex items-center gap-2 mt-2">
-              <div className="h-1.5 flex-1 bg-secondary rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-amber-400 rounded-full transition-all duration-500"
-                  style={{ width: `${totalTarget > 0 ? Math.min((totalSaved / totalTarget) * 100, 100) : 0}%` }}
-                />
-              </div>
-              <span className="text-xs text-muted-foreground">
-                {totalTarget > 0 ? ((totalSaved / totalTarget) * 100).toFixed(0) : 0}%
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Clock className="w-5 h-5 text-blue-400" />
-              </div>
-              <span className="text-sm text-muted-foreground">Saving Duration</span>
-            </div>
-            <p className="text-3xl font-bold text-foreground">{formatDuration()}</p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Started {earliestStart.toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <Calendar className="w-5 h-5 text-emerald-400" />
-              </div>
-              <span className="text-sm text-muted-foreground">Monthly Total</span>
-            </div>
-            <p className="text-3xl font-bold text-foreground">₹{totalMonthly.toLocaleString("en-IN")}</p>
-            <p className="text-xs text-muted-foreground mt-2">
-              Across {funds.length} fund{funds.length !== 1 ? "s" : ""}
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card border-border">
-          <CardContent className="p-5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="p-2 rounded-lg bg-purple-500/10">
-                <TrendingUp className="w-5 h-5 text-purple-400" />
-              </div>
-              <span className="text-sm text-muted-foreground">Remaining</span>
-            </div>
-            <p className="text-3xl font-bold text-foreground">₹{(totalTarget - totalSaved).toLocaleString("en-IN")}</p>
-            <p className="text-xs text-muted-foreground mt-2">of ₹{totalTarget.toLocaleString("en-IN")} target</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Funds Grid - 2 columns */}
-        <div className="lg:col-span-2 space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Your Emergency Funds</h2>
+        <div className="lg:col-span-2 space-y-6">
 
-          {funds.length === 0 ? (
-            <Card className="bg-card border-border border-dashed">
-              <CardContent className="py-12 flex flex-col items-center justify-center text-center">
-                <div className="p-4 rounded-full bg-amber-500/10 mb-4">
-                  <Shield className="w-10 h-10 text-amber-400" />
-                </div>
-                <h3 className="text-lg font-medium text-foreground mb-2">No Emergency Funds Yet</h3>
-                <p className="text-sm text-muted-foreground max-w-sm mb-4">
-                  Start building your financial safety net. Experts recommend saving 3-6 months of expenses for
-                  emergencies.
-                </p>
-                <Button className="bg-amber-500 hover:bg-amber-600 text-white" onClick={() => setShowAddFund(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Create Your First Fund
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {funds.map((fund) => {
-                const progress = (fund.savedAmount / fund.targetAmount) * 100
-                const status = getHealthStatus(fund)
-                const StatusIcon = status.icon
-                const FundIcon = fundIcons[fund.icon as keyof typeof fundIcons] || Shield
-                const monthsToGoal =
-                  fund.monthlyContribution > 0
-                    ? Math.ceil((fund.targetAmount - fund.savedAmount) / fund.monthlyContribution)
-                    : 0
+          {/* 1. Shield Status Card (Core Visualization) */}
+          <Card className={cn("bg-gradient-to-br border", colors.gradient, colors.border)}>
+            <CardContent className="p-6">
+              <div className="flex flex-col lg:flex-row lg:items-center gap-6">
 
-                return (
-                  <Card
-                    key={fund.id}
-                    className="bg-card border-border hover:border-amber-500/30 transition-all duration-200 group"
-                  >
-                    <CardContent className="p-5">
-                      {/* Header */}
-                      <div className="flex items-start justify-between mb-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-12 h-12 rounded-xl bg-amber-500/10 flex items-center justify-center">
-                            <FundIcon className="w-6 h-6 text-amber-400" />
-                          </div>
-                          <div>
-                            <h3 className="font-semibold text-foreground">{fund.name}</h3>
-                            <div className="flex items-center gap-2 mt-1">
-                              <Badge variant="outline" className={cn("text-xs border", status.color)}>
-                                <StatusIcon className="w-3 h-3 mr-1" />
-                                {status.label}
-                              </Badge>
-                            </div>
-                          </div>
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity"
-                            >
-                              <MoreHorizontal className="w-4 h-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="bg-card border-border">
-                            <DropdownMenuItem>Edit fund</DropdownMenuItem>
-                            <DropdownMenuItem>View history</DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteFund(fund.id)}>
-                              Delete fund
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-
-                      {/* Progress */}
-                      <div className="mb-4">
-                        <div className="flex justify-between items-end mb-2">
-                          <div>
-                            <p className="text-sm text-muted-foreground">Saved</p>
-                            <p className="text-2xl font-bold text-foreground">
-                              ₹{fund.savedAmount.toLocaleString("en-IN")}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-sm text-muted-foreground">Target</p>
-                            <p className="text-lg text-muted-foreground">
-                              ₹{fund.targetAmount.toLocaleString("en-IN")}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="h-3 bg-secondary rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all duration-500"
-                            style={{ width: `${Math.min(progress, 100)}%` }}
-                          />
-                        </div>
-                        <div className="flex justify-between mt-1.5">
-                          <p className="text-xs text-muted-foreground">{progress.toFixed(1)}% funded</p>
-                          <p className="text-xs text-muted-foreground">
-                            ₹{(fund.targetAmount - fund.savedAmount).toLocaleString("en-IN")} remaining
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Stats Row */}
-                      <div className="grid grid-cols-2 gap-3 mb-4">
-                        <div className="bg-secondary/50 rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <IndianRupee className="w-3.5 h-3.5 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">Monthly</span>
-                          </div>
-                          <p className="text-sm font-semibold text-foreground">
-                            ₹{fund.monthlyContribution.toLocaleString("en-IN")}
-                          </p>
-                        </div>
-                        <div className="bg-secondary/50 rounded-lg p-3">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Clock className="w-3.5 h-3.5 text-muted-foreground" />
-                            <span className="text-xs text-muted-foreground">Time to Goal</span>
-                          </div>
-                          <p className="text-sm font-semibold text-foreground">
-                            {progress >= 100 ? "Complete!" : `${monthsToGoal} month${monthsToGoal !== 1 ? "s" : ""}`}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Contribute Button */}
-                      <Dialog
-                        open={showContribute === fund.id}
-                        onOpenChange={(open) => setShowContribute(open ? fund.id : null)}
-                      >
-                        <DialogTrigger asChild>
-                          <Button className="w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20">
-                            <Plus className="w-4 h-4 mr-2" />
-                            Add Contribution
-                          </Button>
-                        </DialogTrigger>
-                        <DialogContent className="bg-card border-border sm:max-w-[400px]">
-                          <DialogHeader>
-                            <DialogTitle className="text-foreground flex items-center gap-2">
-                              <FundIcon className="w-5 h-5 text-amber-400" />
-                              Contribute to {fund.name}
-                            </DialogTitle>
-                            <DialogDescription className="text-muted-foreground">
-                              ₹{(fund.targetAmount - fund.savedAmount).toLocaleString("en-IN")} remaining to reach your
-                              goal
-                            </DialogDescription>
-                          </DialogHeader>
-                          <div className="space-y-4 mt-4">
-                            {/* Quick Amount Buttons */}
-                            <div className="grid grid-cols-4 gap-2">
-                              {quickAmounts.map((amount) => (
-                                <Button
-                                  key={amount}
-                                  variant="outline"
-                                  size="sm"
-                                  className={cn(
-                                    "border-border",
-                                    contributeAmount === amount.toString() && "bg-amber-500/20 border-amber-500",
-                                  )}
-                                  onClick={() => setContributeAmount(amount.toString())}
-                                >
-                                  ₹{amount >= 1000 ? `${amount / 1000}K` : amount}
-                                </Button>
-                              ))}
-                            </div>
-
-                            {/* Custom Amount */}
-                            <div className="space-y-2">
-                              <label className="text-sm text-muted-foreground">Custom Amount</label>
-                              <Input
-                                type="number"
-                                placeholder="Enter amount"
-                                value={contributeAmount}
-                                onChange={(e) => setContributeAmount(e.target.value)}
-                                className="bg-secondary border-border text-foreground"
-                              />
-                            </div>
-
-                            {/* Preview */}
-                            {contributeAmount && Number.parseFloat(contributeAmount) > 0 && (
-                              <div className="bg-secondary/50 rounded-lg p-4">
-                                <p className="text-sm text-muted-foreground mb-2">After this contribution:</p>
-                                <div className="flex justify-between items-center">
-                                  <span className="text-foreground font-medium">New Total</span>
-                                  <span className="text-lg font-bold text-amber-400">
-                                    ₹
-                                    {Math.min(
-                                      fund.savedAmount + Number.parseFloat(contributeAmount),
-                                      fund.targetAmount,
-                                    ).toLocaleString("en-IN")}
-                                  </span>
-                                </div>
-                                <div className="h-2 bg-background rounded-full mt-2 overflow-hidden">
-                                  <div
-                                    className="h-full bg-amber-400 rounded-full"
-                                    style={{
-                                      width: `${Math.min(
-                                        ((fund.savedAmount + Number.parseFloat(contributeAmount)) / fund.targetAmount) *
-                                          100,
-                                        100,
-                                      )}%`,
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-
-                            <div className="flex gap-3 mt-2">
-                              <Button
-                                variant="outline"
-                                className="flex-1 border-border bg-transparent"
-                                onClick={() => {
-                                  setContributeAmount("")
-                                  setShowContribute(null)
-                                }}
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                className="flex-1 bg-amber-500 hover:bg-amber-600 text-white"
-                                onClick={() => handleContribute(fund.id)}
-                                disabled={!contributeAmount || Number.parseFloat(contributeAmount) <= 0}
-                              >
-                                Add ₹
-                                {contributeAmount ? Number.parseFloat(contributeAmount).toLocaleString("en-IN") : 0}
-                              </Button>
-                            </div>
-                          </div>
-                        </DialogContent>
-                      </Dialog>
-                    </CardContent>
-                  </Card>
-                )
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar - 1 column */}
-        <div className="space-y-4">
-          {/* Recent Contributions */}
-          <Card className="bg-card border-border">
-            <CardContent className="p-5">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-semibold text-foreground flex items-center gap-2">
-                  <History className="w-4 h-4 text-muted-foreground" />
-                  Recent Contributions
-                </h3>
-              </div>
-              <div className="space-y-3">
-                {allContributions.slice(0, 5).map((contribution, index) => {
-                  const ContribIcon = fundIcons[contribution.fundIcon as keyof typeof fundIcons] || Shield
-                  return (
-                    <div key={index} className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center">
-                          <ContribIcon className="w-4 h-4 text-amber-400" />
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{contribution.fundName}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {contribution.date.toLocaleDateString("en-IN", {
-                              day: "numeric",
-                              month: "short",
-                            })}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="text-sm font-medium text-emerald-400">
-                        +₹{contribution.amount.toLocaleString("en-IN")}
+                {/* Ring Chart */}
+                <div className="flex items-center gap-6">
+                  <div className="relative w-32 h-32">
+                    <svg className="w-32 h-32 transform -rotate-90">
+                      <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="none" className="text-secondary opacity-30" />
+                      {/* Core Progress (up to optimal) */}
+                      <circle
+                        cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="none"
+                        strokeDasharray={`${Math.min(shieldStatus.coreProgressPercentage, 100) * 3.52} 352`}
+                        strokeLinecap="round"
+                        className={colors.text}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className={cn("text-2xl font-bold", colors.text)}>
+                        {Math.min(shieldStatus.coreProgressPercentage, 100)}%
                       </span>
+                      <span className="text-[10px] text-muted-foreground uppercase tracking-wider">Core Safe</span>
                     </div>
-                  )
-                })}
+                  </div>
+                  <div>
+                    <Badge variant="outline" className={cn("text-sm mb-2", colors.bg, colors.text, colors.border)}>
+                      {shieldStatus.statusLabel}
+                    </Badge>
+                    <p className="text-lg font-semibold text-foreground">
+                      {formatCurrency(shieldStatus.coreEmergency)}
+                      <span className="text-sm font-normal text-muted-foreground ml-1">
+                        / {formatCurrency(shieldStatus.emergencyOptimal)}
+                      </span>
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">Core Emergency funds (locked)</p>
+                  </div>
+                </div>
+
+                {/* Two-Tier Stats */}
+                <div className="flex-1 grid grid-cols-2 gap-4">
+                  <div className="bg-background/40 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <LockIcon className="w-3 h-3 text-emerald-400" />
+                      <span className="text-xs text-muted-foreground">3-Month Min</span>
+                    </div>
+                    <p className="font-semibold text-foreground">{formatCurrency(shieldStatus.emergencyTarget)}</p>
+                  </div>
+                  <div className="bg-background/40 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Target className="w-3 h-3 text-blue-400" />
+                      <span className="text-xs text-muted-foreground">6-Month Optimal</span>
+                    </div>
+                    <p className="font-semibold text-foreground">{formatCurrency(shieldStatus.emergencyOptimal)}</p>
+                  </div>
+                  <div className="bg-background/40 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Sparkles className="w-3 h-3 text-indigo-400" />
+                      <span className="text-xs text-muted-foreground">Surplus (Flexible)</span>
+                    </div>
+                    <p className={cn("font-semibold", shieldStatus.surplusEmergency > 0 ? "text-indigo-400" : "text-muted-foreground")}>
+                      {formatCurrency(shieldStatus.surplusEmergency)}
+                    </p>
+                  </div>
+                  <div className="bg-background/40 rounded-lg p-3">
+                    <div className="flex items-center gap-2 mb-1">
+                      <Clock className="w-3 h-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Safety Runway</span>
+                    </div>
+                    <p className="font-semibold text-foreground">
+                      {(shieldStatus.totalEmergencyShield / shieldStatus.monthlyEssentialExpenses).toFixed(1)} Months
+                    </p>
+                  </div>
+                </div>
               </div>
-              {allContributions.length > 5 && (
-                <Button variant="ghost" className="w-full mt-4 text-muted-foreground hover:text-foreground">
-                  View All History
-                  <ArrowUpRight className="w-4 h-4 ml-2" />
-                </Button>
+
+              {/* Recommendation Text */}
+              {shieldStatus.status !== "safe" && (
+                <div className="mt-4 p-3 bg-background/30 rounded-lg border border-white/5">
+                  <p className="text-sm font-medium">💡 {shieldStatus.recommended.priorityMessage}</p>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Tips Card */}
-          <Card className="bg-gradient-to-br from-blue-500/5 to-blue-600/10 border-blue-500/20">
+          {/* 2. Ledger Balance Summary (New) */}
+          <BalanceCard status={shieldStatus} />
+
+          {/* 2b. Add from Free Balance → Emergency Fund */}
+          {shieldStatus.freeBalance > 0 && shieldStatus.emergencyFunds.length > 0 && (
+            <Card className="bg-card border-border">
+              <CardContent className="p-5 flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">
+                      Add from Free Balance to Emergency Fund
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Move money from your spendable balance into a protected emergency
+                      envelope.
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-muted-foreground">Free Balance</p>
+                    <p className="text-sm font-semibold text-emerald-400">
+                      {formatCurrency(shieldStatus.freeBalance)}
+                    </p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">
+                      Emergency Fund
+                    </label>
+                    <select
+                      className="w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm"
+                      value={globalFundId || ""}
+                      onChange={(e) => setGlobalFundId(e.target.value || null)}
+                    >
+                      <option value="">Select fund…</option>
+                      {shieldStatus.emergencyFunds.map((fund) => (
+                        <option key={fund.id} value={fund.id}>
+                          {fund.name} ({formatCurrency(fund.currentAmount)})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-muted-foreground">
+                      Amount (₹)
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      placeholder="e.g., 5000"
+                      value={globalAmount}
+                      onChange={(e) => setGlobalAmount(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      className="w-full mt-4 md:mt-0"
+                      onClick={handleGlobalAdd}
+                      disabled={globalSubmitting}
+                    >
+                      {globalSubmitting ? "Allocating..." : "Add to Emergency"}
+                    </Button>
+                    {globalError && (
+                      <p className="text-xs text-rose-400 flex items-center gap-1">
+                        <AlertTriangle className="w-3 h-3" /> {globalError}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* 3. Surplus Panel (Conditional) */}
+          <SurplusPanel status={shieldStatus} recommendations={surplusRecs} onReallocate={refreshData} />
+
+          {/* 4. Funds Grid */}
+          <div>
+            <h2 className="text-lg font-semibold mb-4">Your Emergency Allocations</h2>
+            {shieldStatus.emergencyFunds.length === 0 ? (
+              <div className="text-center py-10 border border-dashed rounded-xl">
+                <p className="text-muted-foreground mb-4">No funds yet. Start building your shield.</p>
+                <Button onClick={() => setShowAddFund(true)}>Create First Fund</Button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {shieldStatus.emergencyFunds.map((fund) => {
+                  const FundIcon = fundIcons[fund.type] || Shield;
+                  return (
+                    <Card key={fund.id} className="bg-card border-border hover:border-primary/20 transition-all">
+                      <CardContent className="p-5">
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex items-center gap-3">
+                            <div className="p-2.5 rounded-lg bg-secondary text-foreground">
+                              <FundIcon className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <p className="font-medium">{fund.name}</p>
+                              <p className="text-xs text-muted-foreground">{fund.progressPercentage.toFixed(0)}% Funded</p>
+                            </div>
+                          </div>
+                          <Dialog open={showContribute === fund.id} onOpenChange={(open) => setShowContribute(open ? fund.id : null)}>
+                            <DialogTrigger asChild>
+                              <Button size="sm" variant="outline" className="h-8">
+                                <Plus className="w-3 h-3 mr-1" /> Add
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-[400px]">
+                              <DialogHeader>
+                                <DialogTitle>Reallocate to {fund.name}</DialogTitle>
+                                <DialogDescription>
+                                  Move money from another emergency fund into this envelope. Net balance and total
+                                  emergency pool stay the same.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="mt-4 space-y-4">
+                                <div className="grid grid-cols-4 gap-2">
+                                  {quickAmounts.map(amt => (
+                                    <Button key={amt} variant="outline" size="sm" onClick={() => setContributeAmount(amt.toString())}>
+                                      ₹{amt / 1000}k
+                                    </Button>
+                                  ))}
+                                </div>
+                                <Input
+                                  type="number"
+                                  placeholder="Custom Amount"
+                                  value={contributeAmount}
+                                  onChange={(e) => setContributeAmount(e.target.value)}
+                                />
+                                {contributeError && (
+                                  <p className="text-sm text-rose-400 flex items-center gap-1">
+                                    <AlertTriangle className="w-3 h-3" /> {contributeError}
+                                  </p>
+                                )}
+                                <Button onClick={() => handleContribute(fund.id)} disabled={submitting} className="w-full">
+                                  {submitting ? "Allocating..." : "Confirm Allocation"}
+                                </Button>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-sm">
+                            <span className="text-muted-foreground">Current</span>
+                            <span className="font-medium">{formatCurrency(fund.currentAmount)}</span>
+                          </div>
+                          <div className="h-2 bg-secondary rounded-full overflow-hidden">
+                            <div className="h-full bg-primary" style={{ width: `${Math.min(fund.progressPercentage, 100)}%` }} />
+                          </div>
+                          <div className="flex justify-between text-xs text-muted-foreground">
+                            <span>Target: {formatCurrency(fund.targetAmount)}</span>
+                            <span>{Math.max(0, fund.targetAmount - fund.currentAmount) === 0 ? "Completed" : "In Progress"}</span>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+
+        </div>
+
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Feature Access */}
+          <Card className="bg-card border-border">
             <CardContent className="p-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Lightbulb className="w-5 h-5 text-blue-400" />
-                <h3 className="font-semibold text-foreground">Emergency Fund Tips</h3>
-              </div>
+              <h3 className="font-semibold mb-4 flex items-center gap-2">
+                <LockIcon className="w-4 h-4 text-muted-foreground" />
+                Feature Access
+              </h3>
               <div className="space-y-3">
-                <div className="flex gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 shrink-0" />
-                  <p className="text-sm text-muted-foreground">
-                    Aim for <span className="text-foreground">3-6 months</span> of essential expenses
-                  </p>
+                <div className={cn("flex items-center justify-between p-2 rounded-lg text-sm", shieldStatus.featureAccess.canInvest ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400")}>
+                  <span>Investments</span>
+                  {shieldStatus.featureAccess.canInvest ? <ShieldCheck className="w-4 h-4" /> : <LockIcon className="w-4 h-4" />}
                 </div>
-                <div className="flex gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 shrink-0" />
-                  <p className="text-sm text-muted-foreground">
-                    Keep funds in a <span className="text-foreground">liquid savings account</span> for quick access
-                  </p>
+                <div className={cn("flex items-center justify-between p-2 rounded-lg text-sm", shieldStatus.featureAccess.canPrepayLoans ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400")}>
+                  <span>Loan Prepayments</span>
+                  {shieldStatus.featureAccess.canPrepayLoans ? <ShieldCheck className="w-4 h-4" /> : <LockIcon className="w-4 h-4" />}
                 </div>
-                <div className="flex gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 shrink-0" />
-                  <p className="text-sm text-muted-foreground">
-                    <span className="text-foreground">Automate</span> monthly contributions for consistency
-                  </p>
-                </div>
-                <div className="flex gap-3">
-                  <div className="w-1.5 h-1.5 rounded-full bg-blue-400 mt-2 shrink-0" />
-                  <p className="text-sm text-muted-foreground">
-                    Only use for <span className="text-foreground">true emergencies</span> - not planned expenses
-                  </p>
+                <div className={cn("flex items-center justify-between p-2 rounded-lg text-sm", shieldStatus.featureAccess.canAllocateToNonEmergencyGoals ? "bg-emerald-500/10 text-emerald-400" : "bg-rose-500/10 text-rose-400")}>
+                  <span>Other Goals</span>
+                  {shieldStatus.featureAccess.canAllocateToNonEmergencyGoals ? <ShieldCheck className="w-4 h-4" /> : <LockIcon className="w-4 h-4" />}
                 </div>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-secondary/30 border-border">
+            <CardContent className="p-5 text-sm space-y-4">
+              <h4 className="font-medium flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-blue-400" />
+                Smart Two-Tier Strategy
+              </h4>
+              <p className="text-muted-foreground">
+                <strong className="text-foreground">Core Shield (3-6mo):</strong> Locked for survival expenses. This determines your safety status.
+              </p>
+              <p className="text-muted-foreground">
+                <strong className="text-foreground">Surplus Shield ({">"}6mo):</strong> Flexible buffer that can be reallocated to investments or debt payoff.
+              </p>
             </CardContent>
           </Card>
         </div>
       </div>
     </>
-  )
+  );
 }

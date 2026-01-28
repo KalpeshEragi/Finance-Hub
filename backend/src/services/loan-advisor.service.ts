@@ -11,10 +11,10 @@
 
 import Transaction from '../models/transaction.model';
 import Loan, { ILoan } from '../models/loan.model';
-import Goal from '../models/goal.model';
 import InvestmentHolding from '../models/investment.model';
 import mongoose from 'mongoose';
 import type { ITransaction } from '../types/transaction.types';
+import { getEmergencyShieldStatus } from './emergency-shield.service';
 
 // =============================================================================
 // TYPES
@@ -75,6 +75,7 @@ export interface FinancialSnapshot {
     totalInvestments: number;
     emergencyFundStatus: 'none' | 'partial' | 'adequate';
     emergencyFundAmount: number;
+    emergencyFundTarget: number; // From user's emergency fund goal (or default 3 months expenses)
     averageSavingsRate: number;
     idleCash: number;
     consistentSavingsMonths: number; // How many months user has been saving consistently
@@ -238,25 +239,15 @@ async function getFinancialSnapshot(
     const investments = await InvestmentHolding.find({ userId });
     const totalInvestments = investments.reduce((sum, inv) => sum + (inv.quantity * inv.currentPrice), 0);
 
-    // Check emergency fund goals
-    const emergencyGoals = await Goal.find({
-        userId,
-        title: { $regex: /emergency/i },
-        status: 'active',
-    });
-
-    let emergencyFundAmount = 0;
+    // Get emergency fund status from the central shield service
+    const shieldStatus = await getEmergencyShieldStatus(userId);
+    const emergencyFundAmount = shieldStatus.totalEmergencyShield;
+    const emergencyFundTarget = shieldStatus.emergencyTarget;
     let emergencyFundStatus: 'none' | 'partial' | 'adequate' = 'none';
-
-    if (emergencyGoals.length > 0) {
-        emergencyFundAmount = emergencyGoals.reduce((sum, g) => sum + g.currentAmount, 0);
-        const targetEmergencyFund = monthlyExpenses * 6;
-
-        if (emergencyFundAmount >= targetEmergencyFund) {
-            emergencyFundStatus = 'adequate';
-        } else if (emergencyFundAmount > 0) {
-            emergencyFundStatus = 'partial';
-        }
+    if (shieldStatus.status === 'safe') {
+        emergencyFundStatus = 'adequate';
+    } else if (shieldStatus.status === 'partial') {
+        emergencyFundStatus = 'partial';
     }
 
     // Calculate savings rate
@@ -272,6 +263,7 @@ async function getFinancialSnapshot(
         totalInvestments,
         emergencyFundStatus,
         emergencyFundAmount,
+        emergencyFundTarget,
         averageSavingsRate,
         idleCash,
         consistentSavingsMonths,
@@ -338,13 +330,12 @@ function analyzeLoansPriority(loans: ILoan[]): LoanDetail[] {
 function generateRepaymentPlan(
     loans: LoanDetail[],
     availableFunds: number,
-    monthlyExpenses: number
+    emergencyFundTarget: number
 ): RepaymentPlan[] {
     const plan: RepaymentPlan[] = [];
 
-    // Keep 3 months expenses as emergency buffer
-    const emergencyBuffer = monthlyExpenses * 3;
-    let fundsToUse = Math.max(0, availableFunds - emergencyBuffer);
+    // Respect user's emergency fund goal (from database)
+    let fundsToUse = Math.max(0, availableFunds - emergencyFundTarget);
 
     if (fundsToUse <= 0) {
         return plan;
@@ -479,7 +470,8 @@ function generatePersonalizedAdvice(
     loans: LoanDetail[],
     repaymentPlan: RepaymentPlan[]
 ): PersonalizedAdvice {
-    const emergencyFundRequired = snapshot.monthlyExpenses * 3;
+    // Use user's emergency fund goal from database
+    const emergencyFundRequired = snapshot.emergencyFundTarget;
     const safeToUse = Math.max(0, snapshot.idleCash - emergencyFundRequired);
 
     // Calculate totals for comparison
@@ -646,8 +638,8 @@ export async function getSmartLoanAdvice(userId: mongoose.Types.ObjectId): Promi
     const userLoans = await Loan.find({ userId, status: 'active' });
     const loans = analyzeLoansPriority(userLoans);
 
-    // Generate repayment plan based on idle savings
-    const repaymentPlan = generateRepaymentPlan(loans, snapshot.idleCash, snapshot.monthlyExpenses);
+    // Generate repayment plan based on idle savings, respecting emergency fund goal
+    const repaymentPlan = generateRepaymentPlan(loans, snapshot.idleCash, snapshot.emergencyFundTarget);
 
     // Generate recommendations
     const recommendations = generateRecommendations(snapshot, loans, monthlySavingsHistory, repaymentPlan);

@@ -25,6 +25,7 @@ import { getTransactions, type Transaction } from "@/lib/api/transactions"
 import { getLoans, type Loan, type LoanSummary } from "@/lib/api/loans"
 import { getGoals, type Goal } from "@/lib/api/goals"
 import { useSecuritySettings } from "@/lib/context/security-context"
+import EmergencyShieldBadge from "@/components/emergency-shield-badge"
 import {
   PieChart as RechartsPie,
   Pie,
@@ -463,6 +464,27 @@ export default function DashboardPage() {
                 </p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Emergency Shield Status */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-2">
+          <EmergencyShieldBadge variant="card" showFeatureAccess={true} />
+        </div>
+        <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+          <CardContent className="p-5 flex flex-col justify-center h-full">
+            <h3 className="text-lg font-semibold text-foreground mb-2">Financial Safety First</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Build your emergency shield before investing or paying off debt aggressively.
+            </p>
+            <Link href="/dashboard/emergency-fund">
+              <Button variant="outline" className="w-full border-primary/30 hover:bg-primary/10">
+                Manage Shield
+                <ArrowRight className="w-4 h-4 ml-2" />
+              </Button>
+            </Link>
           </CardContent>
         </Card>
       </div>

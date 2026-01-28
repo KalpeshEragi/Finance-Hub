@@ -198,6 +198,7 @@ export interface FinancialSnapshot {
     totalInvestments: number;
     emergencyFundStatus: 'none' | 'partial' | 'adequate';
     emergencyFundAmount: number;
+    emergencyFundTarget: number; // From user's emergency fund goal
     averageSavingsRate: number;
     idleCash: number;
     consistentSavingsMonths: number;
