@@ -101,3 +101,94 @@ export async function deleteInvestment(id: string): Promise<{ success: boolean; 
     if (!response.ok) throw new Error(data.message || 'Failed to delete investment');
     return data;
 }
+
+// =============================================================================
+// INVESTMENT AGENT TYPES & API
+// =============================================================================
+
+export type ReadinessStatus = 'READY' | 'NOT_READY' | 'CAUTION';
+export type BlockerSeverity = 'high' | 'medium' | 'low';
+export type InvestmentRiskLevel = 'conservative' | 'moderate' | 'aggressive';
+
+export interface ReadinessBlocker {
+    rule: string;
+    description: string;
+    current: number;
+    threshold: number;
+    severity: BlockerSeverity;
+    message: string;
+}
+
+export interface InvestmentReadinessResult {
+    status: ReadinessStatus;
+    score: number;
+    reasons: string[];
+    blockers: ReadinessBlocker[];
+    recommendations: string[];
+}
+
+export interface InvestmentSuggestion {
+    id: string;
+    name: string;
+    type: 'equity' | 'debt' | 'hybrid' | 'tax_saving';
+    riskLevel: InvestmentRiskLevel;
+    expectedReturns: string;
+    minAmount: number;
+    lockInPeriod: string | null;
+    taxBenefit: boolean;
+    suitableFor: string[];
+    whyRecommended: string;
+    actionItem: string;
+}
+
+export interface PersonalizedInvestmentAdvice {
+    readinessBlock: {
+        headline: string;
+        status: ReadinessStatus;
+        score: number;
+        summary: string;
+        topBlockers: ReadinessBlocker[];
+    };
+    recommendationsBlock: {
+        headline: string;
+        suggestions: InvestmentSuggestion[];
+        monthlyInvestmentCapacity: number;
+        sipRecommendation: string | null;
+    };
+    nextStepsBlock: {
+        headline: string;
+        steps: { stepNumber: number; action: string; reason: string }[];
+        encouragement: string;
+    };
+    coachNote: string;
+}
+
+export interface InvestmentAgentResponse {
+    readiness: InvestmentReadinessResult;
+    suggestions: InvestmentSuggestion[];
+    personalizedAdvice: PersonalizedInvestmentAdvice;
+    financialSnapshot: {
+        monthlyIncome: number;
+        monthlyExpense: number;
+        monthlySurplus: number;
+        savingsRate: number;
+        emergencyFundMonths: number;
+        totalDebt: number;
+        emiToIncomeRatio: number;
+    };
+}
+
+/**
+ * @brief Get investment readiness assessment and personalized advice.
+ * @returns Investment agent response with readiness, suggestions, and advice.
+ */
+export async function getInvestmentAdvice(): Promise<{ success: boolean; data: InvestmentAgentResponse }> {
+    const response = await fetch(`${API_BASE_URL}/investment-agent/advice`, {
+        method: 'GET',
+        headers: getAuthHeaders(),
+    });
+
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.message || 'Failed to fetch investment advice');
+    return data;
+}

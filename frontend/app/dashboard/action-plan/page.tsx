@@ -25,6 +25,7 @@ import {
 import { getBudgetAdvice, type BudgetAdviceResponse, type BudgetRecommendation } from "@/lib/api/budget"
 import { getGoals, type Goal } from "@/lib/api/goals"
 import { getLoanRecommendations, type SmartLoanAdviceResponse, type LoanRecommendation, type RepaymentPlan } from "@/lib/api/loans"
+import { getInvestmentAdvice, type InvestmentAgentResponse } from "@/lib/api/investments"
 
 /**
  * @file Action Plan Page
@@ -82,11 +83,13 @@ export default function ActionPlanPage() {
     const [budgetAdvice, setBudgetAdvice] = useState<BudgetAdviceResponse | null>(null)
     const [goals, setGoals] = useState<Goal[]>([])
     const [loanAdvice, setLoanAdvice] = useState<SmartLoanAdviceResponse['data'] | null>(null)
+    const [investmentAdvice, setInvestmentAdvice] = useState<InvestmentAgentResponse | null>(null)
 
     // Error states for graceful degradation
     const [budgetError, setBudgetError] = useState(false)
     const [goalsError, setGoalsError] = useState(false)
     const [loanError, setLoanError] = useState(false)
+    const [investmentError, setInvestmentError] = useState(false)
 
     /**
      * @brief Fetch all agent data in parallel for optimal performance.
@@ -99,10 +102,11 @@ export default function ActionPlanPage() {
         const month = now.getMonth() + 1
         const year = now.getFullYear()
 
-        const [budgetResult, goalsResult, loansResult] = await Promise.allSettled([
+        const [budgetResult, goalsResult, loansResult, investmentResult] = await Promise.allSettled([
             getBudgetAdvice(month, year),
             getGoals(),
             getLoanRecommendations(),
+            getInvestmentAdvice(),
         ])
 
         // Process Budget Agent results
@@ -127,6 +131,14 @@ export default function ActionPlanPage() {
             setLoanError(false)
         } else {
             setLoanError(true)
+        }
+
+        // Process Investment Agent results
+        if (investmentResult.status === 'fulfilled' && investmentResult.value?.data) {
+            setInvestmentAdvice(investmentResult.value.data)
+            setInvestmentError(false)
+        } else {
+            setInvestmentError(true)
         }
 
         setIsLoading(false)
@@ -207,12 +219,45 @@ export default function ActionPlanPage() {
             })
         }
 
-        // Investment placeholder
-        bullets.push({
-            icon: <TrendingUp className="w-4 h-4" />,
-            text: "Investment recommendations coming soon",
-            type: 'info'
-        })
+        // Investment Scout summary
+        if (investmentAdvice?.readiness) {
+            const { status, score } = investmentAdvice.readiness
+            const topSuggestion = investmentAdvice.suggestions?.[0]
+
+            if (status === 'READY') {
+                bullets.push({
+                    icon: <TrendingUp className="w-4 h-4" />,
+                    text: topSuggestion
+                        ? `Ready to invest! Start with ${topSuggestion.name} - ${topSuggestion.expectedReturns}`
+                        : `Investment readiness score: ${score}/100 - You're ready to invest!`,
+                    type: 'success'
+                })
+            } else if (status === 'CAUTION') {
+                const blocker = investmentAdvice.readiness.blockers?.[0]
+                bullets.push({
+                    icon: <TrendingUp className="w-4 h-4" />,
+                    text: blocker
+                        ? `Almost ready to invest: ${blocker.description} needs attention`
+                        : `Investment readiness: ${score}/100 - Minor fixes needed`,
+                    type: 'warning'
+                })
+            } else {
+                const blocker = investmentAdvice.readiness.blockers?.[0]
+                bullets.push({
+                    icon: <TrendingUp className="w-4 h-4" />,
+                    text: blocker
+                        ? `Fix first: ${blocker.description} - ${blocker.message.slice(0, 60)}...`
+                        : 'Build financial foundation before investing',
+                    type: 'warning'
+                })
+            }
+        } else if (!investmentError) {
+            bullets.push({
+                icon: <TrendingUp className="w-4 h-4" />,
+                text: "Investment advice loading...",
+                type: 'info'
+            })
+        }
 
         return bullets
     }
@@ -543,7 +588,7 @@ export default function ActionPlanPage() {
                     </CardContent>
                 </Card>
 
-                {/* Investment Scout Section (TODO Stub) */}
+                {/* Investment Scout Section */}
                 <Card className="bg-card border-border">
                     <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
@@ -556,24 +601,130 @@ export default function ActionPlanPage() {
                                     <CardDescription className="text-xs">Smart investing</CardDescription>
                                 </div>
                             </div>
-                            <Badge variant="outline" className="text-xs border-purple-500/30 text-purple-500">
-                                Coming Soon
-                            </Badge>
-                        </div>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-center py-6">
-                            <Clock className="w-8 h-8 mx-auto mb-2 text-purple-500 opacity-50" />
-                            <p className="text-sm text-muted-foreground">Investment recommendations</p>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                Personalized investment advice based on your risk profile and goals is coming soon.
-                            </p>
                             <Link href="/dashboard/investments">
-                                <Button variant="ghost" size="sm" className="text-xs mt-3 text-purple-500">
-                                    View Current Holdings <ChevronRight className="w-3 h-3 ml-1" />
+                                <Button variant="ghost" size="sm" className="text-xs">
+                                    Holdings <ChevronRight className="w-3 h-3 ml-1" />
                                 </Button>
                             </Link>
                         </div>
+                    </CardHeader>
+                    <CardContent>
+                        {investmentError ? (
+                            <div className="text-center py-6 text-muted-foreground">
+                                <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                                <p className="text-sm">Could not load investment advice</p>
+                            </div>
+                        ) : investmentAdvice ? (
+                            <div className="space-y-4">
+                                {/* Readiness Status */}
+                                <div className="p-3 rounded-lg border border-border bg-secondary/30">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className="font-medium text-sm text-foreground">
+                                            {investmentAdvice.personalizedAdvice?.readinessBlock?.headline || 'Investment Readiness'}
+                                        </span>
+                                        <Badge
+                                            variant="outline"
+                                            className={`text-xs ${investmentAdvice.readiness.status === 'READY'
+                                                    ? 'border-emerald-500/30 text-emerald-500'
+                                                    : investmentAdvice.readiness.status === 'CAUTION'
+                                                        ? 'border-amber-500/30 text-amber-500'
+                                                        : 'border-red-500/30 text-red-500'
+                                                }`}
+                                        >
+                                            {investmentAdvice.readiness.status === 'READY' ? 'Ready' :
+                                                investmentAdvice.readiness.status === 'CAUTION' ? 'Caution' : 'Not Ready'}
+                                        </Badge>
+                                    </div>
+                                    <div className="flex justify-between text-xs mb-2">
+                                        <span className="text-muted-foreground">Readiness Score</span>
+                                        <span className={`font-medium ${investmentAdvice.readiness.score >= 70 ? 'text-emerald-500' :
+                                                investmentAdvice.readiness.score >= 40 ? 'text-amber-500' : 'text-red-500'
+                                            }`}>
+                                            {investmentAdvice.readiness.score}/100
+                                        </span>
+                                    </div>
+                                    {investmentAdvice.personalizedAdvice?.readinessBlock?.summary && (
+                                        <p className="text-xs text-muted-foreground">
+                                            {investmentAdvice.personalizedAdvice.readinessBlock.summary}
+                                        </p>
+                                    )}
+                                </div>
+
+                                {/* Top Blocker (if NOT_READY or CAUTION) */}
+                                {investmentAdvice.readiness.status !== 'READY' &&
+                                    investmentAdvice.readiness.blockers?.length > 0 && (
+                                        <div className="p-3 rounded-lg border border-amber-500/20 bg-amber-500/5">
+                                            <div className="flex items-start gap-2">
+                                                <AlertCircle className="w-4 h-4 text-amber-500 mt-0.5 shrink-0" />
+                                                <div>
+                                                    <p className="text-xs font-medium text-foreground">
+                                                        {investmentAdvice.readiness.blockers[0].description}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground mt-1">
+                                                        {investmentAdvice.readiness.blockers[0].message}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                {/* Top 2 Investment Suggestions */}
+                                {investmentAdvice.suggestions?.length > 0 && (
+                                    <div className="space-y-2">
+                                        <p className="text-xs text-muted-foreground font-medium">
+                                            {investmentAdvice.readiness.status === 'READY' ? 'Recommended Investments' : 'When Ready, Consider'}
+                                        </p>
+                                        {investmentAdvice.suggestions.slice(0, 2).map((suggestion) => (
+                                            <div key={suggestion.id} className="p-3 rounded-lg border border-border bg-secondary/30">
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <span className="font-medium text-sm text-foreground">{suggestion.name}</span>
+                                                    <Badge variant="outline" className={`text-xs ${suggestion.riskLevel === 'conservative' ? 'border-emerald-500/30 text-emerald-500' :
+                                                            suggestion.riskLevel === 'moderate' ? 'border-amber-500/30 text-amber-500' :
+                                                                'border-red-500/30 text-red-500'
+                                                        }`}>
+                                                        {suggestion.riskLevel}
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                                                    <span>Expected: {suggestion.expectedReturns}</span>
+                                                    <span>Min: {formatCurrency(suggestion.minAmount)}</span>
+                                                </div>
+                                                <p className="text-xs text-muted-foreground">{suggestion.whyRecommended}</p>
+                                                {suggestion.taxBenefit && (
+                                                    <Badge variant="outline" className="text-xs mt-2 border-purple-500/30 text-purple-500">
+                                                        Tax Benefit (80C)
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* SIP Recommendation */}
+                                {investmentAdvice.personalizedAdvice?.recommendationsBlock?.sipRecommendation && (
+                                    <div className="p-3 rounded-lg border border-purple-500/20 bg-purple-500/5">
+                                        <div className="flex items-start gap-2">
+                                            <Lightbulb className="w-4 h-4 text-purple-500 mt-0.5 shrink-0" />
+                                            <p className="text-xs text-foreground">
+                                                {investmentAdvice.personalizedAdvice.recommendationsBlock.sipRecommendation}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Coach Note */}
+                                {investmentAdvice.personalizedAdvice?.coachNote && (
+                                    <p className="text-xs text-muted-foreground italic border-l-2 border-purple-500/30 pl-3">
+                                        💡 {investmentAdvice.personalizedAdvice.coachNote}
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="text-center py-6">
+                                <Loader2 className="w-8 h-8 mx-auto mb-2 text-purple-500 animate-spin" />
+                                <p className="text-sm text-muted-foreground">Analyzing investment readiness...</p>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
             </div>
