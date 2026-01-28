@@ -99,8 +99,6 @@ export default function ActionPlanPage() {
         const month = now.getMonth() + 1
         const year = now.getFullYear()
 
-        console.log('[ActionPlan] Fetching data for:', { month, year })
-
         const [budgetResult, goalsResult, loansResult] = await Promise.allSettled([
             getBudgetAdvice(month, year),
             getGoals(),
@@ -108,57 +106,26 @@ export default function ActionPlanPage() {
         ])
 
         // Process Budget Agent results
-        console.log('[ActionPlan] Budget result raw:', budgetResult)
-        if (budgetResult.status === 'fulfilled') {
-            console.log('[ActionPlan] Budget value:', budgetResult.value)
-            if (budgetResult.value?.data) {
-                console.log('[ActionPlan] Budget data:', budgetResult.value.data)
-                console.log('[ActionPlan] Budget recommendations:', budgetResult.value.data.recommendations)
-                setBudgetAdvice(budgetResult.value.data)
-                setBudgetError(false)
-            } else {
-                console.error('[ActionPlan] Budget data missing in response:', budgetResult.value)
-                setBudgetError(true)
-            }
+        if (budgetResult.status === 'fulfilled' && budgetResult.value?.data) {
+            setBudgetAdvice(budgetResult.value.data)
+            setBudgetError(false)
         } else {
-            console.error('[ActionPlan] Budget Agent failed:', budgetResult.reason)
             setBudgetError(true)
         }
 
         // Process Savings Agent results
-        console.log('[ActionPlan] Goals result raw:', goalsResult)
-        if (goalsResult.status === 'fulfilled') {
-            console.log('[ActionPlan] Goals value:', goalsResult.value)
-            if (goalsResult.value?.data) {
-                console.log('[ActionPlan] Goals data (count):', goalsResult.value.data.length)
-                console.log('[ActionPlan] Goals:', goalsResult.value.data)
-                setGoals(goalsResult.value.data)
-                setGoalsError(false)
-            } else {
-                console.error('[ActionPlan] Goals data missing in response:', goalsResult.value)
-                setGoalsError(true)
-            }
+        if (goalsResult.status === 'fulfilled' && goalsResult.value?.data) {
+            setGoals(goalsResult.value.data)
+            setGoalsError(false)
         } else {
-            console.error('[ActionPlan] Savings Agent failed:', goalsResult.reason)
             setGoalsError(true)
         }
 
         // Process Debt Manager results
-        // Note: getLoanRecommendations returns { success: boolean, data: {...} }
-        if (loansResult.status === 'fulfilled') {
-            console.log('[ActionPlan] Loan result raw:', loansResult.value)
-            if (loansResult.value?.data) {
-                setLoanAdvice(loansResult.value.data)
-                setLoanError(false)
-            } else if (loansResult.value?.success === false) {
-                console.error('[ActionPlan] Loan API returned failure:', loansResult.value)
-                setLoanError(true)
-            } else {
-                console.error('[ActionPlan] Loan data missing in response:', loansResult.value)
-                setLoanError(true)
-            }
+        if (loansResult.status === 'fulfilled' && loansResult.value?.data) {
+            setLoanAdvice(loansResult.value.data)
+            setLoanError(false)
         } else {
-            console.error('[ActionPlan] Debt Manager failed:', loansResult)
             setLoanError(true)
         }
 
@@ -411,7 +378,7 @@ export default function ActionPlanPage() {
                             </div>
                         ) : goals.length > 0 ? (
                             <div className="space-y-3">
-                                {goals.filter(g => g.status !== 'achieved').slice(0, 2).map((goal) => (
+                                {goals.filter(g => g.status !== 'achieved').slice(0, 3).map((goal) => (
                                     <div key={goal.id} className="p-3 rounded-lg border border-border bg-secondary/30">
                                         <div className="flex justify-between items-start mb-2">
                                             <span className="font-medium text-sm text-foreground">{goal.title}</span>
