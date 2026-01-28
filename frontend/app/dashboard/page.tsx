@@ -19,6 +19,7 @@ import {
   EyeOff,
   PiggyBank,
   Target,
+  Sparkles,
 } from "lucide-react"
 import { getTransactions, type Transaction } from "@/lib/api/transactions"
 import { getLoans, type Loan, type LoanSummary } from "@/lib/api/loans"
@@ -389,10 +390,10 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-semibold text-foreground">Dashboard</h1>
           <p className="text-muted-foreground text-sm mt-1">Your financial overview at a glance</p>
         </div>
-        <Link href="/dashboard/transactions">
+        <Link href="/dashboard/action-plan">
           <Button>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Transaction
+            <Sparkles className="w-4 h-4 mr-2" />
+            View Action Plan
           </Button>
         </Link>
       </div>
