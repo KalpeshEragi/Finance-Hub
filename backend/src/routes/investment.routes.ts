@@ -3,7 +3,8 @@ import {
     getInvestments,
     createInvestment,
     updateInvestment,
-    deleteInvestment
+    deleteInvestment,
+    seedInvestments
 } from '../controllers/investment.controller';
 import { authenticate } from '../middleware/auth.middleware';
 
@@ -14,6 +15,7 @@ router.use(authenticate);
 
 router.get('/', getInvestments);
 router.post('/', createInvestment);
+router.post('/seed', seedInvestments);  // Seed mock data for current user
 router.put('/:id', updateInvestment);
 router.delete('/:id', deleteInvestment);
 

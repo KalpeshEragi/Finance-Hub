@@ -3,6 +3,7 @@ import InvestmentHolding from '../models/investment.model';
 import Transaction from '../models/transaction.model';
 import { HTTP_STATUS, SUCCESS_MESSAGES } from '../config/constants';
 import { AppError } from '../middleware/error.middleware';
+import { seedInvestmentsForUser } from '../services/investment-seeder.service';
 
 /**
  * Get all investment holdings for the current user
@@ -98,5 +99,43 @@ export async function deleteInvestment(req: Request, res: Response, next: NextFu
         res.status(HTTP_STATUS.OK).json({ success: true, message: SUCCESS_MESSAGES.DELETED });
     } catch (error) {
         next(error);
+    }
+}
+
+/**
+ * Seed mock investment data for the current user
+ * POST /investments/seed
+ */
+export async function seedInvestments(req: Request, res: Response, next: NextFunction) {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            throw new AppError('User not authenticated', HTTP_STATUS.UNAUTHORIZED);
+        }
+
+        // Check if user already has investments
+        const existingCount = await InvestmentHolding.countDocuments({ userId });
+
+        if (existingCount > 0) {
+            return res.status(HTTP_STATUS.OK).json({
+                success: true,
+                message: `User already has ${existingCount} investments. Use force=true to re-seed.`,
+                seeded: false,
+            });
+        }
+
+        await seedInvestmentsForUser(userId);
+
+        const newCount = await InvestmentHolding.countDocuments({ userId });
+
+        return res.status(HTTP_STATUS.CREATED).json({
+            success: true,
+            message: `Seeded ${newCount} mock investments successfully`,
+            seeded: true,
+            count: newCount,
+        });
+    } catch (error) {
+        return next(error);
     }
 }

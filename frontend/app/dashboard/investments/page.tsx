@@ -3,9 +3,8 @@
 import { useEffect, useState } from "react"
 import { LivePerformanceCard } from "@/components/investments/live-performance-card"
 import { PortfolioSummaryCard } from "@/components/investments/portfolio-summary-card"
-import { HoldingsList } from "@/components/investments/holdings-list"
-import { MarketIndices } from "@/components/investments/market-indices"
 import { MutualFundsCard } from "@/components/investments/mutual-funds-card"
+import { RecommendationsCard } from "@/components/investments/recommendations-card"
 import { AddAssetDialog } from "@/components/investments/add-asset-dialog"
 import { getInvestments, type InvestmentHolding, type InvestmentSummary } from "@/lib/api/investments"
 import { useToast } from "@/components/ui/use-toast"
@@ -82,20 +81,17 @@ export default function InvestmentsPage() {
         </div>
       </div>
 
-      {/* Market Indices Ticker */}
-      <MarketIndices />
+      {/* Recommendations Card */}
+      <RecommendationsCard />
 
-      {/* Live Performance Collage */}
-      <LivePerformanceCard />
-
-      {/* Portfolio Summary & Mutual Funds */}
+      {/* Portfolio Summary & Assets */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
         <PortfolioSummaryCard summary={summary} holdings={holdings} />
         <MutualFundsCard holdings={holdings} />
       </div>
 
-      {/* Holdings List */}
-      <HoldingsList holdings={holdings} isLoading={isLoading} />
+      {/* Live Performance - User Stocks / Trending */}
+      <LivePerformanceCard holdings={holdings} />
     </>
   )
 }

@@ -1,0 +1,1 @@
+﻿src/controllers/investment-recommendation.controller.ts(16,23): error TS7030: Not all code paths return a value.

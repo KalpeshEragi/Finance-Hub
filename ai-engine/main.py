@@ -67,6 +67,8 @@ from app.routers import (
     alerts,
     parse,
     budget,
+    investment_readiness,
+    agent_explanation,
 )
 
 # =============================================================================
@@ -129,6 +131,12 @@ app.include_router(parse.router, prefix="/parse", tags=["Document Parsing"])
 # Budget Agent
 app.include_router(budget.router, prefix="/budget", tags=["Budget Agent"])
 
+# Investment Agent - Readiness Gate
+app.include_router(investment_readiness.router, tags=["Investment Agent"])
+
+# Investment Agent - Explanation Layer
+app.include_router(agent_explanation.router, tags=["Investment Agent"])
+
 # =============================================================================
 # ROOT ENDPOINT
 # =============================================================================
@@ -155,6 +163,8 @@ async def root():
             "/goals/plan",
             "/twin/simulate",
             "/alerts/check",
+            "/investment/readiness",
+            "/agent/explanation",
         ],
     }
 

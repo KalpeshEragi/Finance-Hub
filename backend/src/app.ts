@@ -41,6 +41,12 @@ import paymentMethodsRoutes from './routes/paymentMethods.routes';
 import recurringRoutes from './routes/recurring.routes';
 import investmentRoutes from './routes/investment.routes';
 import loansRoutes from './routes/loans.routes';
+import ledgerRoutes from './routes/ledger.routes';
+import investmentAgentRoutes from './routes/investment-agent.routes';
+import riskProfileRoutes from './routes/risk-profile.routes';
+import investmentRecommendationRoutes from './routes/investment-recommendation.routes';
+import agentExplanationRoutes from './routes/agent-explanation.routes';
+import stockMarketRoutes from './routes/stock-market.routes';
 import emergencyShieldRoutes from './routes/emergency-shield.routes';
 import balanceRoutes from './routes/balance.routes';
 import { getRegisteredRoutes } from './utils/routeRegistry'
@@ -196,6 +202,24 @@ function createApp(): Express {
 
     // Loans / Debt management (protected)
     app.use('/loans', loansRoutes);
+
+    // Ledger Aggregation for Investment Agent (protected)
+    app.use('/ledger', ledgerRoutes);
+
+    // Investment Agent - Readiness & Advice (protected)
+    app.use('/investment-agent', investmentAgentRoutes);
+
+    // Risk Profile Classification (protected)
+    app.use('/risk-profile', riskProfileRoutes);
+
+    // Investment Recommendations (protected)
+    app.use('/investment-recommendations', investmentRecommendationRoutes);
+
+    // Agent Explanation Layer (protected)
+    app.use('/agent', agentExplanationRoutes);
+
+    // Live Stock Market Data (protected)
+    app.use('/stocks', stockMarketRoutes);
 
     // Emergency Shield - Central Safety Controller (protected)
     app.use('/emergency-shield', emergencyShieldRoutes);

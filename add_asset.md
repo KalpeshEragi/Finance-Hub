@@ -28,7 +28,7 @@ Only support **4 asset types**. Anything more is noise.
     
 ## 🧾 Common Fields (For ALL Asset Types)
 
-These common fields always exist:
+These common fields always exist
 
 | Field | Why |
 | --- | --- |

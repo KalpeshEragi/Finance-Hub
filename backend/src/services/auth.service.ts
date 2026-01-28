@@ -19,6 +19,7 @@ import User from '../models/user.model';
 import { signToken } from '../utils/jwt';
 import { AppError } from '../middleware/error.middleware';
 import { HTTP_STATUS, ERROR_MESSAGES } from '../config/constants';
+import { seedInvestmentsForUser } from './investment-seeder.service';
 import type {
     RegisterInput,
     LoginInput,
@@ -71,6 +72,14 @@ export async function register(input: RegisterInput): Promise<AuthResponse> {
         password,
         name,
     });
+
+    // Seed mock investments for the new user
+    try {
+        await seedInvestmentsForUser(user._id.toString());
+    } catch (seedError) {
+        console.error('Failed to seed investments:', seedError);
+        // Don't fail registration if seeding fails
+    }
 
     // Generate JWT token
     const token = signToken({
@@ -145,6 +154,24 @@ export async function login(input: LoginInput): Promise<AuthResponse> {
         userId: user._id.toString(),
         email: user.email,
     });
+
+    // Seed mock investments if user doesn't have any (for existing users)
+    // This runs async in background, doesn't block login
+    const InvestmentHolding = (await import('../models/investment.model')).default;
+    InvestmentHolding.countDocuments({ userId: user._id })
+        .then(async (count) => {
+            if (count === 0) {
+                try {
+                    await seedInvestmentsForUser(user._id.toString());
+                    console.log(`📊 Seeded investments for user ${user.email} on login`);
+                } catch (error) {
+                    console.error('Failed to seed investments on login:', error);
+                }
+            }
+        })
+        .catch(() => {
+            // Ignore errors silently
+        });
 
     // Return response
     return {

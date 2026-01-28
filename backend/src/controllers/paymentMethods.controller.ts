@@ -44,7 +44,7 @@ export const getPaymentMethods = async (
             },
         });
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
 
@@ -97,7 +97,7 @@ export const addBankAccount = async (
             message: 'Bank account added successfully',
         });
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
 
@@ -183,13 +183,13 @@ export const addCreditCard = async (
             cardNickname: cardNickname || undefined,
         });
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             data: method,
             message: 'Credit card added successfully',
         });
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
 
@@ -236,13 +236,13 @@ export const addUpi = async (
             upiId: upiId.toLowerCase(),
         });
 
-        res.status(201).json({
+        return res.status(201).json({
             success: true,
             data: method,
             message: 'UPI ID added successfully',
         });
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
 
@@ -272,12 +272,12 @@ export const deletePaymentMethod = async (
             });
         }
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             message: 'Payment method removed successfully',
         });
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
 
@@ -317,12 +317,12 @@ export const getPaymentMethodCounts = async (
             if (c._id === 'upi') result.upiAccounts = c.count;
         });
 
-        res.status(200).json({
+        return res.status(200).json({
             success: true,
             data: result,
         });
     } catch (error) {
-        next(error);
+        return next(error);
     }
 };
 

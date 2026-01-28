@@ -120,7 +120,7 @@ export async function createBulkTransactions(
 interface StatementTransaction {
     date: string;
     description: string;
-    amount: number;
+    amount: number | string;
     type: 'income' | 'expense';
     reference?: string;
     balance?: number;
@@ -200,11 +200,13 @@ export async function importStatementTransactions(
                 if (parts.length === 3) {
                     // Assume DD/MM/YYYY or DD-MM-YYYY
                     const [day, month, year] = parts;
-                    parsedDate = new Date(
-                        parseInt(year.length === 2 ? `20${year}` : year),
-                        parseInt(month) - 1,
-                        parseInt(day)
-                    );
+                    if (day && month && year) {
+                        parsedDate = new Date(
+                            parseInt(year.length === 2 ? `20${year}` : year),
+                            parseInt(month) - 1,
+                            parseInt(day)
+                        );
+                    }
                 }
                 // If still invalid, use current date
                 if (isNaN(parsedDate.getTime())) {

@@ -17,6 +17,8 @@ from app.routers import (
     digital_twin,
     alerts,
     parse,
+    investment_readiness,
+    agent_explanation,
 )
 
 __all__ = [
@@ -29,4 +31,6 @@ __all__ = [
     "digital_twin",
     "alerts",
     "parse",
+    "investment_readiness",
+    "agent_explanation",
 ]

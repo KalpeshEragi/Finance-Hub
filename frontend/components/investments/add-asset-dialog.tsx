@@ -182,7 +182,8 @@ export function AddAssetDialog({ open, onOpenChange, onSuccess }: AddAssetDialog
               value={assetType}
               onValueChange={(v) => {
                 setAssetType(v as AssetType)
-                setAssetName("")
+                // For PPF, set default scheme name; otherwise clear
+                setAssetName(v === "ppf" ? "PPF" : "")
               }}
             >
               <SelectTrigger className="w-full">

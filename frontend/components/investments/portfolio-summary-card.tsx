@@ -1,9 +1,12 @@
 "use client"
 
+import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, Wallet, TrendingDown } from "lucide-react"
+import { TrendingUp, Wallet, TrendingDown, Shield, Zap, Rocket } from "lucide-react"
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts"
 import { type InvestmentSummary, type InvestmentHolding } from "@/lib/api/investments"
+import { getRiskProfile } from "@/lib/api/recommendations"
+import { cn } from "@/lib/utils"
 
 interface PortfolioSummaryCardProps {
   summary: InvestmentSummary
@@ -16,6 +19,7 @@ const TYPE_COLORS: Record<string, string> = {
   'crypto': "#f59e0b",
   'gold': "#eab308",
   'fd': "#64748b",
+  'ppf': "#8b5cf6",
   'other': "#94a3b8"
 };
 
@@ -25,10 +29,53 @@ const TYPE_LABELS: Record<string, string> = {
   'crypto': 'Crypto',
   'gold': 'Gold',
   'fd': 'Fixed Deposits',
+  'ppf': 'PPF',
   'other': 'Other'
 };
 
+type RiskProfileTier = 'Stability-Focused' | 'Growth-Ready' | 'Growth-Optimized';
+
+const RISK_PROFILE_CONFIG: Record<RiskProfileTier, { color: string; bgColor: string; icon: React.ReactNode }> = {
+  'Stability-Focused': {
+    color: 'text-blue-400',
+    bgColor: 'bg-blue-500/10',
+    icon: <Shield className="w-3 h-3" />
+  },
+  'Growth-Ready': {
+    color: 'text-emerald-400',
+    bgColor: 'bg-emerald-500/10',
+    icon: <Zap className="w-3 h-3" />
+  },
+  'Growth-Optimized': {
+    color: 'text-purple-400',
+    bgColor: 'bg-purple-500/10',
+    icon: <Rocket className="w-3 h-3" />
+  }
+};
+
 export function PortfolioSummaryCard({ summary, holdings }: PortfolioSummaryCardProps) {
+  const [riskProfile, setRiskProfile] = useState<RiskProfileTier | null>(null)
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true)
+
+  useEffect(() => {
+    fetchRiskProfile()
+  }, [])
+
+  const fetchRiskProfile = async () => {
+    setIsLoadingProfile(true)
+    try {
+      const result = await getRiskProfile()
+      if (result?.success && result?.data?.profile) {
+        setRiskProfile(result.data.profile)
+      }
+    } catch (err) {
+      console.error('Failed to fetch risk profile:', err)
+      setRiskProfile(null)
+    } finally {
+      setIsLoadingProfile(false)
+    }
+  }
+
   // Calculate breakdown by type
   const typeTotals: Record<string, number> = {};
   holdings.forEach(h => {
@@ -43,14 +90,32 @@ export function PortfolioSummaryCard({ summary, holdings }: PortfolioSummaryCard
   })).sort((a, b) => b.value - a.value);
 
   const isPositive = summary.totalReturns >= 0;
+  const profileConfig = riskProfile ? RISK_PROFILE_CONFIG[riskProfile] : null;
 
   return (
     <Card className="bg-card border-border">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-          <Wallet className="w-4 h-4" />
-          Portfolio Summary
-        </CardTitle>
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+            <Wallet className="w-4 h-4" />
+            Portfolio Summary
+          </CardTitle>
+
+          {/* Risk Profile Tag */}
+          {!isLoadingProfile && riskProfile && profileConfig && (
+            <div className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium",
+              profileConfig.bgColor,
+              profileConfig.color
+            )}>
+              {profileConfig.icon}
+              {riskProfile}
+            </div>
+          )}
+          {isLoadingProfile && (
+            <div className="h-6 w-24 bg-secondary/50 rounded-full animate-pulse" />
+          )}
+        </div>
       </CardHeader>
       <CardContent>
         <div className="flex items-center gap-6">
